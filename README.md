@@ -1,2 +1,2 @@
 # D2HonorsProject
-Harvey Jarvis's Honors Project Repository
+Harvey Jarvis's Honours Project Repository
