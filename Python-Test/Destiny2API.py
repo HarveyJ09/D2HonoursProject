@@ -21,7 +21,7 @@ get_user_details_endpoint = 'https://www.bungie.net/Platform/User/GetCurrentBung
 
 @app.route('/')
 def index():
-    return render_template('main.html')
+    return render_template('Login.html')
 
 @app.route('/login')
 def login():
@@ -41,7 +41,7 @@ def callback():
     additional_headers = {'X-API-KEY': api_key}
     response = session.get(url=get_user_details_endpoint, headers=additional_headers)
     user_data = response.json()
-    return render_template('main.html', user_data=user_data)
+    return render_template('Login.html', user_data=user_data)
 
-if __name__ == '__main__':
+if __name__ == '__Login__':
     app.run(debug=True)

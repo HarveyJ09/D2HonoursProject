@@ -1,0 +1,74 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body Styles */
+body {
+    font-family: Arial, sans-serif; /* Use a clean, sans-serif font */
+    line-height: 1.6; /* Improve readability with line height */
+    padding: 20px; /* Add some padding around the body */
+    background-color: #f4f4f4; /* Light gray background for better contrast */
+}
+
+/* Header Styles */
+h1 {
+    color: #333; /* Dark text color */
+    text-align: center; /* Center the header */
+    margin-bottom: 20px; /* Space below the header */
+}
+
+/* User Data Styles */
+p {
+    background: #fff; /* White background for paragraphs */
+    border: 1px solid #ddd; /* Light border around paragraphs */
+    border-radius: 5px; /* Rounded corners */
+    padding: 15px; /* Padding inside paragraphs */
+    margin: 10px 0; /* Space between paragraphs */
+}
+
+/* Image Styles */
+img {
+    max-width: 100%; /* Make images responsive */
+    height: auto; /* Maintain aspect ratio */
+    display: block; /* Ensure image is a block element */
+    margin: 0 auto; /* Center the image horizontally */
+}
+
+/* Link Styles */
+a {
+    display: inline-block; /* Make the link an inline block */
+    padding: 10px 15px; /* Padding inside the link */
+    background-color: #007bff; /* Blue background for the link */
+    color: white; /* White text color */
+    border-radius: 5px; /* Rounded corners */
+    text-decoration: none; /* Remove underline */
+    text-align: center; /* Center text in the link */
+}
+
+/* Link Hover Effect */
+a:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
+
+/* Responsive Media Queries */
+@media (max-width: 600px) {
+    body {
+        padding: 10px; /* Reduce padding on smaller screens */
+    }
+
+    h1 {
+        font-size: 1.5em; /* Smaller font size for header */
+    }
+
+    p {
+        font-size: 0.9em; /* Smaller font size for paragraphs */
+    }
+
+    a {
+        width: 100%; /* Full width links on small screens */
+        text-align: center; /* Center text for links */
+    }
+}
