@@ -29,6 +29,10 @@ def login():
     auth_link, state = session.authorization_url(base_auth_url)
     return redirect(auth_link)
 
+@app.route('/main')
+def main():
+    return render_template('Main.html')
+
 @app.route('/callback')
 def callback():
     session = OAuth2Session(client_id, redirect_uri=redirect_url)
@@ -41,7 +45,7 @@ def callback():
     additional_headers = {'X-API-KEY': api_key}
     response = session.get(url=get_user_details_endpoint, headers=additional_headers)
     user_data = response.json()
-    return render_template('Login.html', user_data=user_data)
+    return render_template('Main.html', user_data=user_data)
 
-if __name__ == '__Login__':
+if __name__ == '__main__':
     app.run(debug=True)
