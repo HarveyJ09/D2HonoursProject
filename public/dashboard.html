@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #121212;
+            color: white;
+        }
+        .container {
+            display: flex;
+            justify-content: flex-start; /* Aligns content to the left */
+        }
+        .left-section {
+            display: flex;
+            flex-direction: column;
+            width: 50%; /* Takes up half of the space */
+        }
+        .character-columns {
+            display: flex;
+            flex-direction: row; /* Keeps the character columns in a row */
+            justify-content: space-between; /* Spreads them evenly */
+        }
+        .column {
+            width: 32%; /* Adjust width so three columns fit nicely */
+            padding: 20px;
+            border: 1px solid black;
+            text-align: left;
+        }
+        .vault {
+            width: 50%; /* Vault takes up half the space */
+            padding: 20px;
+            border: 1px solid black;
+            text-align: left;
+        }
+        .character-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 10px;
+        }
+        .emblem {
+            width: 36px;  /* Adjust width as needed */
+            height: auto;   /* Maintain aspect ratio */
+            display: block; /* Ensure proper spacing */
+        }        
+        .power {
+            font-size: 22px;
+            font-weight: bold;
+            color: gold;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding-top: 10px;
+            font-size: 14px;
+        }
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stat img {
+            width: 20px;
+            height: 20px;
+        }
+        .icon {
+            filter: invert(1);
+        }
+    </style>
+</head>
+<body>
+    <h1 id="welcome-message">Loading...</h1>
+    <div class="container">
+        <div class="left-section">
+            <div class="character-columns">
+                <div class="column" id="hunter">
+                    <img id="hunter-emblem" class="emblem" src="" alt="Emblem">
+                    <h2>Hunter</h2>
+                    <div class="character-header">
+                        <span class="power" id="hunter-power">Power: --</span>
+                    </div>
+                    <div class="stats" id="hunter-stats"></div>
+                </div>
+
+                <div class="column" id="warlock">
+                    <img id="warlock-emblem" class="emblem" src="" alt="Emblem">
+                    <h2>Warlock</h2>
+                    <div class="character-header">
+                        <span class="power" id="warlock-power">Power: --</span>
+                    </div>
+                    <div class="stats" id="warlock-stats"></div>
+                </div>
+
+                <div class="column" id="titan">
+                    <img id="titan-emblem" class="emblem" src="" alt="Emblem">
+                    <h2>Titan</h2>
+                    <div class="character-header">
+                        <span class="power" id="titan-power">Power: --</span>
+                    </div>
+                    <div class="stats" id="titan-stats"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vault">
+            <h2>Vault</h2>
+            <p>Coming soon...</p>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const userName = params.get("user") || "Guardian";
+        document.getElementById("welcome-message").textContent = `Welcome, ${userName}!`;
+
+        async function fetchCharacterData() {
+            try {
+                let response = await fetch('/api/characters');
+                let data = await response.json();
+
+                if (data.error) {
+                    document.getElementById("hunter").innerHTML = `<h2>Hunter</h2><p>Error: ${data.error}</p>`;
+                    document.getElementById("warlock").innerHTML = `<h2>Warlock</h2><p>Error: ${data.error}</p>`;
+                    document.getElementById("titan").innerHTML = `<h2>Titan</h2><p>Error: ${data.error}</p>`;
+                    return;
+                }
+
+                console.log("Character Data:", data);
+
+                function updateCharacterUI(classType) {
+                    const charData = data.characterData[classType];
+
+                    if (!charData) return;
+
+                    document.getElementById(`${classType}-emblem`).src = `https://www.bungie.net${charData.emblemPath}`;
+                    document.getElementById(`${classType}-power`).textContent = `Power: ${charData.light}`;
+
+                    // Define stat IDs and corresponding image paths
+                    const statIcons = {
+                        "2996146975": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/mobility.svg",  // Mobility
+                        "392767087": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/resilience.svg", // Resilience
+                        "1943323491": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/recovery.svg",  // Recovery
+                        "1735777505": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/discipline.svg", // Discipline
+                        "144602215": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/intellect.svg",  // Intellect
+                        "4244567218": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/strength.svg"    // Strength
+                    };
+
+                    let statsHtml = "";
+                    for (const [statId, icon] of Object.entries(statIcons)) {
+                        let statValue = charData.stats[statId] || "--";
+                        statsHtml += `<div class="stat"><img src="${icon}" class="icon" alt=""><span>${statValue}</span></div>`;
+                    }
+
+                    document.getElementById(`${classType}-stats`).innerHTML = statsHtml;
+                }
+
+                updateCharacterUI("hunter");
+                updateCharacterUI("warlock");
+                updateCharacterUI("titan");
+
+            } catch (error) {
+                console.error("Failed to fetch character data", error);
+            }
+        }
+
+        fetchCharacterData();
+    </script>
+</body>
+</html>

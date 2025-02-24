@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hunter Character</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #1a1a1a; color: white; }
+        pre { background: #222; padding: 10px; border-radius: 5px; text-align: left; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>Hunter Character Info</h1>
+    <pre id="hunter-info">Loading...</pre>
+
+    <script>
+        async function fetchCharacterData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let accessToken = urlParams.get("access_token") || localStorage.getItem("access_token");
+            let membershipId = "4611686018489102995"; // Hardcoded Membership ID
+            let characterId = "2305843009497844085"; // Hardcoded Character ID
+
+            if (!accessToken) {
+                console.error("Missing access token");
+                document.getElementById("hunter-info").innerText = "Error: Missing access token.";
+                return;
+            }
+
+            localStorage.setItem("access_token", accessToken);
+
+            console.log("Hunter Page - Access Token:", accessToken);
+            console.log("Hunter Page - Membership ID:", membershipId);
+            console.log("Hunter Page - Character ID:", characterId);
+
+            try {
+                // Fetch Hunter Character Data
+                const characterUrl = `https://www.bungie.net/Platform/Destiny2/3/Profile/${membershipId}/Character/${characterId}/?components=200`;
+                console.log("Fetching Character Data from:", characterUrl);
+                
+                const characterResponse = await fetch(characterUrl, {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`,
+                        "X-API-Key": "af43e3d211514a42b1ca4e6125077ce5"
+                    }
+                });
+
+                const characterText = await characterResponse.text();
+                console.log("Character Raw Response:", characterText);
+
+                if (!characterResponse.ok) {
+                    throw new Error(`HTTP Error! Status: ${characterResponse.status} - ${characterText}`);
+                }
+
+                const characterData = JSON.parse(characterText);
+                console.log("Hunter Character Data:", characterData);
+
+                document.getElementById("hunter-info").innerText = JSON.stringify(characterData, null, 2);
+            } catch (error) {
+                console.error("Error fetching hunter data:", error);
+                document.getElementById("hunter-info").innerText = `Error fetching hunter data: ${error.message}`;
+            }
+        }
+
+        window.onload = fetchCharacterData;
+    </script>
+</body>
+</html>
