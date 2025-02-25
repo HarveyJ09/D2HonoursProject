@@ -16,7 +16,7 @@ app.use(express.static('public'));
 app.use(session({
     secret: 'password', // Change this to a strong secret key
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: { secure: false } // Change to true if using HTTPS in production
 }));
 
@@ -165,6 +165,71 @@ app.get('/api/characters', async (req, res) => {
     }
 });
 
+app.get('/api/vault', async (req, res) => {
+    try {
+        const { membershipId, membershipType } = req.session;
+
+        console.log(`Fetching vault for membershipId: ${membershipId}, membershipType: ${membershipType}`);
+
+        const profileUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=102`;
+        const profileResponse = await axios.get(profileUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        if (!profileResponse.data.Response.profileInventory) {
+            return res.status(500).json({ error: "Failed to retrieve vault data" });
+        }
+
+        const vaultItems = profileResponse.data.Response.profileInventory.data.items || [];
+        const itemHashes = vaultItems.map(item => item.itemHash);
+
+        console.log(`Fetching definitions for ${itemHashes.length} items...`);
+
+        // Fetch all item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Map the fetched definitions to the vault items
+        const vaultWithImages = vaultItems.map(item => {
+            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+            return {
+                itemHash: item.itemHash,
+                quantity: item.quantity,
+                icon: definition ? definition.icon : null
+            };
+        });
+
+        console.log(`Returning ${vaultWithImages.length} items with images.`);
+        res.json({ vaultItems: vaultWithImages });
+
+    } catch (error) {
+        console.error("Error fetching vault data:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve vault data" });
+    }
+});
+
+
+app.use((req, res, next) => {
+    console.log("Session Data at Request:", req.session);
+    next();
+});
 
 
 app.get('/character-data', async (req, res) => {

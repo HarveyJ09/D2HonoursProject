@@ -73,6 +73,28 @@
         .icon {
             filter: invert(1);
         }
+        .vault-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+        
+        .vault-item {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .vault-icon {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        
+        
     </style>
 </head>
 <body>
@@ -111,7 +133,9 @@
 
         <div class="vault">
             <h2>Vault</h2>
-            <p>Coming soon...</p>
+            <div id="vault-loading" class="loading">Loading vault items...</div>
+            <ul id="vault-items" class="vault-grid"></ul>
+
         </div>
     </div>
 
@@ -170,6 +194,60 @@
             }
         }
 
+        async function fetchVaultData() {
+            try {
+                let response = await fetch('/api/vault', { credentials: 'include' }); // Ensures session cookies are sent
+                let data = await response.json();
+        
+                if (data.error) {
+                    console.error("Error fetching vault data:", data.error);
+                    return;
+                }
+        
+                let vaultContainer = document.getElementById("vault-items");
+                if (!vaultContainer) {
+                    console.error("Vault container not found!");
+                    return;
+                }
+        
+                vaultContainer.innerHTML = data.vaultItems.length > 0
+                    ? data.vaultItems.map(item => `
+                        <div class="vault-item">
+                            <img src="${item.icon}" class="vault-icon" alt="Item">
+                            <span>x${item.quantity}</span>
+                        </div>
+                      `).join("")
+                    : "<p>No items found.</p>";
+        
+            } catch (error) {
+                console.error("Failed to fetch vault data", error);
+            }
+        }
+
+        window.onload = async function() {
+        try {
+            const user = new URLSearchParams(window.location.search).get("user");
+            const response = await fetch(`/api/vault?user=${user}`);
+            if (!response.ok) {
+                throw new Error('Failed to load vault data');
+            }
+
+            const data = await response.json();
+            document.getElementById('vault-loading').style.display = 'none';
+
+            const vaultItemsList = document.getElementById('vault-items');
+            data.vaultItems.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<img src="${item.icon}" alt="Item" /> ${item.itemHash} - ${item.quantity}`;
+                vaultItemsList.appendChild(li);
+            });
+        } catch (error) {
+            console.error('Error loading vault data:', error);
+            document.getElementById('vault-loading').innerText = 'Failed to load vault items. Please try again later.';
+        }
+    };
+
+        fetchVaultData();
         fetchCharacterData();
     </script>
 </body>
