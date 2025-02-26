@@ -165,6 +165,70 @@ app.get('/api/characters', async (req, res) => {
     }
 });
 
+app.get('/api/inventory', async (req, res) => {
+    try {
+        const { membershipId, membershipType } = req.session;
+        const characterId = "2305843009497844085"; // Hunter Character ID
+
+        console.log(`Fetching inventory for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${characterId}`);
+
+        const profileUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=201`;
+        const characterInventoryResponse = await axios.get(profileUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        console.log(`Character Inventory Response for ${characterId}:`, characterInventoryResponse.data);
+
+        const characterInventoryData = characterInventoryResponse.data.Response.characterInventories.data[characterId];
+        if (!characterInventoryData) {
+            return res.status(500).json({ error: "Failed to retrieve inventory data" });
+        }
+
+        const inventoryItems = characterInventoryData.items || [];
+        const itemHashes = inventoryItems.map(item => item.itemHash);
+
+        console.log(`Fetching definitions for ${itemHashes.length} items...`);
+
+        // Fetch all item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Map the fetched definitions to the inventory items
+        const inventoryWithImages = inventoryItems.map(item => {
+            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+            return {
+                itemHash: item.itemHash,
+                quantity: item.quantity,
+                icon: definition ? definition.icon : null
+            };
+        });
+
+        console.log(`Returning ${inventoryWithImages.length} items with images.`);
+        res.json({ inventoryItems: inventoryWithImages });
+
+    } catch (error) {
+        console.error("Error fetching inventory data:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve inventory data" });
+    }
+});
+
 app.get('/api/vault', async (req, res) => {
     try {
         const { membershipId, membershipType } = req.session;

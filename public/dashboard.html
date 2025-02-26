@@ -9,13 +9,14 @@
             font-family: Arial, sans-serif;
             text-align: center;
             margin-top: 50px;
-            background-color: #121212;
+            background-color: #6e6c6c;
             color: white;
         }
         .container {
             display: flex;
             justify-content: flex-start; /* Aligns content to the left */
         }
+        
         .left-section {
             display: flex;
             flex-direction: column;
@@ -29,13 +30,13 @@
         .column {
             width: 32%; /* Adjust width so three columns fit nicely */
             padding: 20px;
-            border: 1px solid black;
+            
             text-align: left;
         }
         .vault {
             width: 50%; /* Vault takes up half the space */
             padding: 20px;
-            border: 1px solid black;
+            
             text-align: left;
         }
         .character-header {
@@ -65,6 +66,7 @@
             display: flex;
             align-items: center;
             gap: 5px;
+            line-height: 20px;
         }
         .stat img {
             width: 20px;
@@ -73,28 +75,26 @@
         .icon {
             filter: invert(1);
         }
-        .vault-grid {
+        .item-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
             gap: 10px;
             padding: 10px;
         }
         
-        .vault-item {
-            text-align: center;
-            background-color: rgba(255, 255, 255, 0.1);
-            padding: 5px;
-            border-radius: 5px;
+        .item {
+            box-sizing: border-box;
+            contain: layout paint style;
+            cursor: grab;
+            width: var(--item-size);
         }
         
-        .vault-icon {
+        .item-icon {
             width: 50px;
             height: 50px;
             object-fit: cover;
             border-radius: 5px;
         }
-        
-        
     </style>
 </head>
 <body>
@@ -109,8 +109,10 @@
                         <span class="power" id="hunter-power">Power: --</span>
                     </div>
                     <div class="stats" id="hunter-stats"></div>
+                    <div style="margin-top:70px;" id="hunter-inventory-loading">Loading inventory data...</div>
+                    <div style="margin-top:70px;" id="hunter-inventory-items" class="item-grid"></div>
                 </div>
-
+                
                 <div class="column" id="warlock">
                     <img id="warlock-emblem" class="emblem" src="" alt="Emblem">
                     <h2>Warlock</h2>
@@ -118,8 +120,10 @@
                         <span class="power" id="warlock-power">Power: --</span>
                     </div>
                     <div class="stats" id="warlock-stats"></div>
+                    <div style="margin-top:70px;" id="warlock-inventory-loading">Loading inventory data...</div>
+                    <div style="margin-top:70px;" id="warlock-inventory-items" class="item-grid"></div>
                 </div>
-
+                
                 <div class="column" id="titan">
                     <img id="titan-emblem" class="emblem" src="" alt="Emblem">
                     <h2>Titan</h2>
@@ -127,6 +131,8 @@
                         <span class="power" id="titan-power">Power: --</span>
                     </div>
                     <div class="stats" id="titan-stats"></div>
+                    <div style="margin-top:70px;" id="titan-inventory-loading">Loading inventory data...</div>
+                    <div style="margin-top:70px;" id="titan-inventory-items" class="item-grid"></div>
                 </div>
             </div>
         </div>
@@ -134,7 +140,7 @@
         <div class="vault">
             <h2>Vault</h2>
             <div id="vault-loading" class="loading">Loading vault items...</div>
-            <ul id="vault-items" class="vault-grid"></ul>
+            <div id="vault-items" class="item-grid"></div>
 
         </div>
     </div>
@@ -143,29 +149,29 @@
         const params = new URLSearchParams(window.location.search);
         const userName = params.get("user") || "Guardian";
         document.getElementById("welcome-message").textContent = `Welcome, ${userName}!`;
-
+    
         async function fetchCharacterData() {
             try {
                 let response = await fetch('/api/characters');
                 let data = await response.json();
-
+    
                 if (data.error) {
                     document.getElementById("hunter").innerHTML = `<h2>Hunter</h2><p>Error: ${data.error}</p>`;
                     document.getElementById("warlock").innerHTML = `<h2>Warlock</h2><p>Error: ${data.error}</p>`;
                     document.getElementById("titan").innerHTML = `<h2>Titan</h2><p>Error: ${data.error}</p>`;
                     return;
                 }
-
+    
                 console.log("Character Data:", data);
-
+    
                 function updateCharacterUI(classType) {
                     const charData = data.characterData[classType];
-
+    
                     if (!charData) return;
-
+    
                     document.getElementById(`${classType}-emblem`).src = `https://www.bungie.net${charData.emblemPath}`;
                     document.getElementById(`${classType}-power`).textContent = `Power: ${charData.light}`;
-
+    
                     // Define stat IDs and corresponding image paths
                     const statIcons = {
                         "2996146975": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/mobility.svg",  // Mobility
@@ -175,78 +181,120 @@
                         "144602215": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/intellect.svg",  // Intellect
                         "4244567218": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/strength.svg"    // Strength
                     };
-
+    
                     let statsHtml = "";
                     for (const [statId, icon] of Object.entries(statIcons)) {
                         let statValue = charData.stats[statId] || "--";
                         statsHtml += `<div class="stat"><img src="${icon}" class="icon" alt=""><span>${statValue}</span></div>`;
                     }
-
+    
                     document.getElementById(`${classType}-stats`).innerHTML = statsHtml;
                 }
-
+    
                 updateCharacterUI("hunter");
                 updateCharacterUI("warlock");
                 updateCharacterUI("titan");
-
+    
             } catch (error) {
                 console.error("Failed to fetch character data", error);
             }
         }
+    
+        async function fetchInventoryData() {
+            try {   
+                let response = await fetch('/api/inventory', { credentials: 'include' });
+                let data = await response.json();
+    
+                if (data.error) {
+                    console.error("Error fetching inventory data:", data.error);
+                    return;
+                }
+    
+                console.log("Inventory Data:", data);
+    
 
+                let hunterContainer = document.getElementById("hunter-inventory-items");
+                if (!hunterContainer) {
+                    console.error("Container not found!");
+                    return;
+                }
+                hunterContainer.innerHTML = data.inventoryItems.length > 0
+                    ? data.inventoryItems.map(item => `
+                        <div class="hunter-inventory-item" draggable="true">
+                            <img src="${item.icon}" class="item-icon" alt="Item">
+                            <span>x${item.quantity}</span>
+                        </div>
+                    `).join("")
+                    : "<p>No items found.</p>";
+                }
+            
+                catch (error) {
+                    console.error("Failed to fetch inventory data", error);
+                }
+        }
+    
         async function fetchVaultData() {
             try {
                 let response = await fetch('/api/vault', { credentials: 'include' }); // Ensures session cookies are sent
                 let data = await response.json();
-        
+    
                 if (data.error) {
                     console.error("Error fetching vault data:", data.error);
                     return;
                 }
-        
+    
                 let vaultContainer = document.getElementById("vault-items");
                 if (!vaultContainer) {
                     console.error("Vault container not found!");
                     return;
                 }
-        
+
+                console.log("Vault Data:", data);
+    
                 vaultContainer.innerHTML = data.vaultItems.length > 0
                     ? data.vaultItems.map(item => `
-                        <div class="vault-item">
-                            <img src="${item.icon}" class="vault-icon" alt="Item">
+                        <div class="vault-item" draggable="true">
+                            <img src="${item.icon}" class="item-icon" alt="Item">
                             <span>x${item.quantity}</span>
                         </div>
-                      `).join("")
+                    `).join("")
                     : "<p>No items found.</p>";
-        
+    
             } catch (error) {
                 console.error("Failed to fetch vault data", error);
             }
         }
-
+    
         window.onload = async function() {
-        try {
-            const user = new URLSearchParams(window.location.search).get("user");
-            const response = await fetch(`/api/vault?user=${user}`);
-            if (!response.ok) {
-                throw new Error('Failed to load vault data');
+            try {
+                const response = await fetch('/api/vault', { credentials: 'include' }); // No need for `user=${user}` here
+                if (!response.ok) {
+                    throw new Error('Failed to load vault data');
+                }
+    
+                const data = await response.json();
+                document.getElementById('vault-loading').style.display = 'none';
+    
+                const vaultItemsGrid = document.getElementById('vault-items');
+                vaultItemsGrid.innerHTML = ''; // Clear any previous content in the grid
+    
+                data.vaultItems.forEach(item => {
+                    const vaultItemDiv = document.createElement('div');
+                    vaultItemDiv.classList.add('vault-item');
+                    vaultItemDiv.innerHTML = `
+                        <img src="${item.icon}" class="item-icon" alt="Item">
+                        <span>x${item.quantity}</span>
+                        ${item.power ? `<div class="vault-item-power">Power: ${item.power}</div>` : ""}
+                    `;
+                    vaultItemsGrid.appendChild(vaultItemDiv);
+                });
+    
+            } catch (error) {
+                console.error('Error loading vault data:', error);
             }
-
-            const data = await response.json();
-            document.getElementById('vault-loading').style.display = 'none';
-
-            const vaultItemsList = document.getElementById('vault-items');
-            data.vaultItems.forEach(item => {
-                const li = document.createElement('li');
-                li.innerHTML = `<img src="${item.icon}" alt="Item" /> ${item.itemHash} - ${item.quantity}`;
-                vaultItemsList.appendChild(li);
-            });
-        } catch (error) {
-            console.error('Error loading vault data:', error);
-            document.getElementById('vault-loading').innerText = 'Failed to load vault items. Please try again later.';
-        }
-    };
-
+        };
+    
+        fetchInventoryData();
         fetchVaultData();
         fetchCharacterData();
     </script>
