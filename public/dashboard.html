@@ -200,9 +200,9 @@
             }
         }
     
-        async function fetchInventoryData() {
+        async function fetchHunterInventoryData() {
             try {   
-                let response = await fetch('/api/inventory', { credentials: 'include' });
+                let response = await fetch('/api/hunterinventory', { credentials: 'include' });
                 let data = await response.json();
     
                 if (data.error) {
@@ -222,7 +222,73 @@
                     ? data.inventoryItems.map(item => `
                         <div class="hunter-inventory-item" draggable="true">
                             <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span>x${item.quantity}</span>
+                            <span>${item.lightLevel}</span>
+                        </div>
+                    `).join("")
+                    : "<p>No items found.</p>";
+                }
+            
+                catch (error) {
+                    console.error("Failed to fetch inventory data", error);
+                }
+        }
+
+        async function fetchWarlockInventoryData() {
+            try {   
+                let response = await fetch('/api/warlockinventory', { credentials: 'include' });
+                let data = await response.json();
+    
+                if (data.error) {
+                    console.error("Error fetching inventory data:", data.error);
+                    return;
+                }
+    
+                console.log("Inventory Data:", data);
+    
+
+                let warlockContainer = document.getElementById("warlock-inventory-items");
+                if (!warlockContainer) {
+                    console.error("Container not found!");
+                    return;
+                }
+                warlockContainer.innerHTML = data.inventoryItems.length > 0
+                    ? data.inventoryItems.map(item => `
+                        <div class="warlock-inventory-item" draggable="true">
+                            <img src="${item.icon}" class="item-icon" alt="Item">
+                            <span>${item.lightLevel}</span>
+                        </div>
+                    `).join("")
+                    : "<p>No items found.</p>";
+                }
+            
+                catch (error) {
+                    console.error("Failed to fetch inventory data", error);
+                }
+        }
+
+        async function fetchTitanInventoryData() {
+            try {   
+                let response = await fetch('/api/titaninventory', { credentials: 'include' });
+                let data = await response.json();
+    
+                if (data.error) {
+                    console.error("Error fetching inventory data:", data.error);
+                    return;
+                }
+    
+                console.log("Inventory Data:", data);
+    
+
+                let titanContainer = document.getElementById("titan-inventory-items");
+                if (!titanContainer) {
+                    console.error("Container not found!");
+                    return;
+                }
+                titanContainer.innerHTML = data.inventoryItems.length > 0
+                    ? data.inventoryItems.map(item => `
+                        <div class="titan-inventory-item" draggable="true">
+                            <img src="${item.icon}" class="item-icon" alt="Item">
+                            <span>${item.lightLevel}</span>
                         </div>
                     `).join("")
                     : "<p>No items found.</p>";
@@ -255,7 +321,7 @@
                     ? data.vaultItems.map(item => `
                         <div class="vault-item" draggable="true">
                             <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span>x${item.quantity}</span>
+                            <span>${item.lightLevel}</span>
                         </div>
                     `).join("")
                     : "<p>No items found.</p>";
@@ -283,7 +349,7 @@
                     vaultItemDiv.classList.add('vault-item');
                     vaultItemDiv.innerHTML = `
                         <img src="${item.icon}" class="item-icon" alt="Item">
-                        <span>x${item.quantity}</span>
+                        <span>${item.lightLevel}</span>
                         ${item.power ? `<div class="vault-item-power">Power: ${item.power}</div>` : ""}
                     `;
                     vaultItemsGrid.appendChild(vaultItemDiv);
@@ -293,8 +359,10 @@
                 console.error('Error loading vault data:', error);
             }
         };
-    
-        fetchInventoryData();
+        
+        fetchTitanInventoryData();
+        fetchWarlockInventoryData();
+        fetchHunterInventoryData();
         fetchVaultData();
         fetchCharacterData();
     </script>

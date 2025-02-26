@@ -165,12 +165,21 @@ app.get('/api/characters', async (req, res) => {
     }
 });
 
-app.get('/api/inventory', async (req, res) => {
+app.get('/api/hunterinventory', async (req, res) => {
     try {
-        const { membershipId, membershipType } = req.session;
-        const characterId = "2305843009497844085"; // Hunter Character ID
+        const { membershipId, membershipType, characterIds } = req.session;
+        
+        if (!membershipId || !membershipType || !characterIds) {
+            return res.status(400).json({ error: "Missing session data. Ensure you have fetched characters first." });
+        }
 
-        console.log(`Fetching inventory for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${characterId}`);
+        const hunterCharacterId = characterIds[0]; // Assuming characterIds[0] is the Hunter
+        
+        if (!hunterCharacterId) {
+            return res.status(500).json({ error: "Hunter character ID not found." });
+        }
+
+        console.log(`Fetching inventory for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${hunterCharacterId}`);
 
         const profileUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=201`;
         const characterInventoryResponse = await axios.get(profileUrl, {
@@ -180,15 +189,16 @@ app.get('/api/inventory', async (req, res) => {
             }
         });
 
-        console.log(`Character Inventory Response for ${characterId}:`, characterInventoryResponse.data);
+        console.log(`Character Inventory Response for ${hunterCharacterId}:`, characterInventoryResponse.data);
 
-        const characterInventoryData = characterInventoryResponse.data.Response.characterInventories.data[characterId];
+        const characterInventoryData = characterInventoryResponse.data.Response.characterInventories.data[hunterCharacterId];
         if (!characterInventoryData) {
             return res.status(500).json({ error: "Failed to retrieve inventory data" });
         }
 
         const inventoryItems = characterInventoryData.items || [];
         const itemHashes = inventoryItems.map(item => item.itemHash);
+        const itemInstanceIds = inventoryItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
 
         console.log(`Fetching definitions for ${itemHashes.length} items...`);
 
@@ -210,18 +220,242 @@ app.get('/api/inventory', async (req, res) => {
 
         const itemDefinitions = await Promise.all(definitionsPromises);
 
-        // Map the fetched definitions to the inventory items
-        const inventoryWithImages = inventoryItems.map(item => {
-            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
-            return {
-                itemHash: item.itemHash,
-                quantity: item.quantity,
-                icon: definition ? definition.icon : null
-            };
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
+
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        // Map the fetched definitions and light levels to the inventory items
+        const inventoryWithImagesAndLightLevels = inventoryItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                return {
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} items with images and light levels.`);
+        res.json({ inventoryItems: inventoryWithImagesAndLightLevels });
+
+    } catch (error) {
+        console.error("Error fetching inventory data:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve inventory data" });
+    }
+});
+
+
+app.get('/api/warlockinventory', async (req, res) => {
+    try {
+        const { membershipId, membershipType, characterIds } = req.session;
+        
+        if (!membershipId || !membershipType || !characterIds) {
+            return res.status(400).json({ error: "Missing session data. Ensure you have fetched characters first." });
+        }
+
+        const warlockCharacterId = characterIds[1];
+        
+        if (!warlockCharacterId) {
+            return res.status(500).json({ error: "Warlock character ID not found." });
+        }
+
+        console.log(`Fetching inventory for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${warlockCharacterId}`);
+
+        const profileUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=201`;
+        const characterInventoryResponse = await axios.get(profileUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
         });
 
-        console.log(`Returning ${inventoryWithImages.length} items with images.`);
-        res.json({ inventoryItems: inventoryWithImages });
+        console.log(`Character Inventory Response for ${warlockCharacterId}:`, characterInventoryResponse.data);
+
+        const characterInventoryData = characterInventoryResponse.data.Response.characterInventories.data[warlockCharacterId];
+        if (!characterInventoryData) {
+            return res.status(500).json({ error: "Failed to retrieve inventory data" });
+        }
+
+        const inventoryItems = characterInventoryData.items || [];
+        const itemHashes = inventoryItems.map(item => item.itemHash);
+        const itemInstanceIds = inventoryItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
+
+        console.log(`Fetching definitions for ${itemHashes.length} items...`);
+
+        // Fetch all item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
+
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        // Map the fetched definitions and light levels to the inventory items
+        const inventoryWithImagesAndLightLevels = inventoryItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                return {
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} items with images and light levels.`);
+        res.json({ inventoryItems: inventoryWithImagesAndLightLevels });
+
+    } catch (error) {
+        console.error("Error fetching inventory data:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve inventory data" });
+    }
+});
+
+app.get('/api/titaninventory', async (req, res) => {
+    try {
+        const { membershipId, membershipType, characterIds } = req.session;
+        
+        if (!membershipId || !membershipType || !characterIds) {
+            return res.status(400).json({ error: "Missing session data. Ensure you have fetched characters first." });
+        }
+
+        const titanCharacterId = characterIds[2];
+        
+        if (!titanCharacterId) {
+            return res.status(500).json({ error: "Titan character ID not found." });
+        }
+
+        console.log(`Fetching inventory for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${titanCharacterId}`);
+
+        const profileUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=201`;
+        const characterInventoryResponse = await axios.get(profileUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        console.log(`Character Inventory Response for ${titanCharacterId}:`, characterInventoryResponse.data);
+
+        const characterInventoryData = characterInventoryResponse.data.Response.characterInventories.data[titanCharacterId];
+        if (!characterInventoryData) {
+            return res.status(500).json({ error: "Failed to retrieve inventory data" });
+        }
+
+        const inventoryItems = characterInventoryData.items || [];
+        const itemHashes = inventoryItems.map(item => item.itemHash);
+        const itemInstanceIds = inventoryItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
+
+        console.log(`Fetching definitions for ${itemHashes.length} items...`);
+
+        // Fetch all item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
+
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        // Map the fetched definitions and light levels to the inventory items
+        const inventoryWithImagesAndLightLevels = inventoryItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                return {
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} items with images and light levels.`);
+        res.json({ inventoryItems: inventoryWithImagesAndLightLevels });
 
     } catch (error) {
         console.error("Error fetching inventory data:", error.response ? error.response.data : error.message);
@@ -235,6 +469,7 @@ app.get('/api/vault', async (req, res) => {
 
         console.log(`Fetching vault for membershipId: ${membershipId}, membershipType: ${membershipType}`);
 
+        // Fetch profile data
         const profileUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=102`;
         const profileResponse = await axios.get(profileUrl, {
             headers: {
@@ -247,12 +482,13 @@ app.get('/api/vault', async (req, res) => {
             return res.status(500).json({ error: "Failed to retrieve vault data" });
         }
 
+        // Fetch the vault items and filter out any non-vault items
         const vaultItems = profileResponse.data.Response.profileInventory.data.items || [];
-        const itemHashes = vaultItems.map(item => item.itemHash);
+        const filteredVaultItems = vaultItems.filter(item => item.bucketHash !== 1469714392); // Exclude vault items (1469714392)
+        const itemHashes = filteredVaultItems.map(item => item.itemHash);
+        const itemInstanceIds = filteredVaultItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
 
-        console.log(`Fetching definitions for ${itemHashes.length} items...`);
-
-        // Fetch all item definitions in parallel using Promise.all
+        // Fetch item definitions in parallel using Promise.all
         const definitionsPromises = itemHashes.map(hash => 
             axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
                 headers: { 'X-API-KEY': API_KEY }
@@ -270,24 +506,51 @@ app.get('/api/vault', async (req, res) => {
 
         const itemDefinitions = await Promise.all(definitionsPromises);
 
-        // Map the fetched definitions to the vault items
-        const vaultWithImages = vaultItems.map(item => {
-            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
-            return {
-                itemHash: item.itemHash,
-                quantity: item.quantity,
-                icon: definition ? definition.icon : null
-            };
-        });
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
 
-        console.log(`Returning ${vaultWithImages.length} items with images.`);
-        res.json({ vaultItems: vaultWithImages });
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        // Map the fetched definitions and light levels to the vault items
+        const vaultWithImagesAndLightLevels = filteredVaultItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                return {
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${vaultWithImagesAndLightLevels.length} items with images and light levels.`);
+        res.json({ vaultItems: vaultWithImagesAndLightLevels });
 
     } catch (error) {
         console.error("Error fetching vault data:", error.response ? error.response.data : error.message);
         res.status(500).json({ error: "Failed to retrieve vault data" });
     }
 });
+
+
 
 
 app.use((req, res, next) => {
