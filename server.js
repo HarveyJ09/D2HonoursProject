@@ -496,7 +496,8 @@ app.get('/api/vault', async (req, res) => {
                 if (definitionResponse.data.Response) {
                     return {
                         hash: hash,
-                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash
                     };
                 }
             }).catch(err => {
@@ -549,9 +550,6 @@ app.get('/api/vault', async (req, res) => {
         res.status(500).json({ error: "Failed to retrieve vault data" });
     }
 });
-
-
-
 
 app.use((req, res, next) => {
     console.log("Session Data at Request:", req.session);
