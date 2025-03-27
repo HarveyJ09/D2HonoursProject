@@ -209,7 +209,9 @@ app.get('/api/hunterinventory', async (req, res) => {
             }).then(definitionResponse => {
                 if (definitionResponse.data.Response) {
                     return {
+                        name: definitionResponse.data.Response.displayProperties.name,
                         hash: hash,
+                        
                         icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
                     };
                 }
@@ -217,7 +219,6 @@ app.get('/api/hunterinventory', async (req, res) => {
                 console.error(`Error fetching definition for item ${hash}:`, err.message);
             })
         );
-
         const itemDefinitions = await Promise.all(definitionsPromises);
 
         // Fetch item light levels (primaryStat value) for each item instance
@@ -229,7 +230,9 @@ app.get('/api/hunterinventory', async (req, res) => {
                 if (itemData?.instance?.data?.primaryStat) {
                     return {
                         itemInstanceId: instanceId,
-                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                        bucketHash: itemData.item.data.bucketHash,
+                        lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        damageType: itemData.instance.data.damageTypeHash
                     };
                 }
                 return null; // If no light level is found
@@ -238,24 +241,50 @@ app.get('/api/hunterinventory', async (req, res) => {
                 return null;
             })
         );
-
+        
         const lightLevels = await Promise.all(lightLevelPromises);
+
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
 
         // Map the fetched definitions and light levels to the inventory items
         const inventoryWithImagesAndLightLevels = inventoryItems
             .map(item => {
                 const definition = itemDefinitions.find(def => def.hash === item.itemHash);
                 const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
                 return {
+                    name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
                     itemHash: item.itemHash,
                     quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
 
-        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} items with images and light levels.`);
+        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} hunter items with images and light levels.`);
         res.json({ inventoryItems: inventoryWithImagesAndLightLevels });
 
     } catch (error) {
@@ -309,6 +338,7 @@ app.get('/api/warlockinventory', async (req, res) => {
             }).then(definitionResponse => {
                 if (definitionResponse.data.Response) {
                     return {
+                        name: definitionResponse.data.Response.displayProperties.name,
                         hash: hash,
                         icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
                     };
@@ -329,7 +359,9 @@ app.get('/api/warlockinventory', async (req, res) => {
                 if (itemData?.instance?.data?.primaryStat) {
                     return {
                         itemInstanceId: instanceId,
-                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                        bucketHash: itemData.item.data.bucketHash,
+                        lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        damageType: itemData.instance.data.damageTypeHash
                     };
                 }
                 return null; // If no light level is found
@@ -341,21 +373,47 @@ app.get('/api/warlockinventory', async (req, res) => {
 
         const lightLevels = await Promise.all(lightLevelPromises);
 
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
+
         // Map the fetched definitions and light levels to the inventory items
         const inventoryWithImagesAndLightLevels = inventoryItems
             .map(item => {
                 const definition = itemDefinitions.find(def => def.hash === item.itemHash);
                 const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
                 return {
+                    name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
                     itemHash: item.itemHash,
                     quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
 
-        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} items with images and light levels.`);
+        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} warlock items with images and light levels.`);
         res.json({ inventoryItems: inventoryWithImagesAndLightLevels });
 
     } catch (error) {
@@ -408,6 +466,7 @@ app.get('/api/titaninventory', async (req, res) => {
             }).then(definitionResponse => {
                 if (definitionResponse.data.Response) {
                     return {
+                        name: definitionResponse.data.Response.displayProperties.name,
                         hash: hash,
                         icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
                     };
@@ -428,7 +487,9 @@ app.get('/api/titaninventory', async (req, res) => {
                 if (itemData?.instance?.data?.primaryStat) {
                     return {
                         itemInstanceId: instanceId,
-                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                        bucketHash: itemData.item.data.bucketHash,
+                        lightLevel: itemData.instance.data.primaryStat.value,
+                        damageType: itemData.instance.data.damageTypeHash
                     };
                 }
                 return null; // If no light level is found
@@ -440,21 +501,47 @@ app.get('/api/titaninventory', async (req, res) => {
 
         const lightLevels = await Promise.all(lightLevelPromises);
 
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
+
         // Map the fetched definitions and light levels to the inventory items
         const inventoryWithImagesAndLightLevels = inventoryItems
             .map(item => {
                 const definition = itemDefinitions.find(def => def.hash === item.itemHash);
                 const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
                 return {
+                    name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
                     itemHash: item.itemHash,
                     quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
 
-        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} items with images and light levels.`);
+        console.log(`Returning ${inventoryWithImagesAndLightLevels.length} titan items with images and light levels.`);
         res.json({ inventoryItems: inventoryWithImagesAndLightLevels });
 
     } catch (error) {
@@ -496,6 +583,7 @@ app.get('/api/vault', async (req, res) => {
                 if (definitionResponse.data.Response) {
                     return {
                         hash: hash,
+                        name: definitionResponse.data.Response.displayProperties.name,
                         icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
                         bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash
                     };
@@ -516,6 +604,7 @@ app.get('/api/vault', async (req, res) => {
                 if (itemData?.instance?.data?.primaryStat) {
                     return {
                         itemInstanceId: instanceId,
+                        bucketHash: itemData.item.data.bucketHash,
                         lightLevel: itemData.instance.data.primaryStat.value // Get the light level
                     };
                 }
@@ -534,8 +623,11 @@ app.get('/api/vault', async (req, res) => {
                 const definition = itemDefinitions.find(def => def.hash === item.itemHash);
                 const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
                 return {
+                    name: definition ? definition.name : null,
                     itemHash: item.itemHash,
                     quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null
                 };

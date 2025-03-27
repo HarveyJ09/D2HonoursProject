@@ -26,11 +26,14 @@
             display: flex;
             flex-direction: row; /* Keeps the character columns in a row */
             justify-content: space-between; /* Spreads them evenly */
+            width: 100%; /* Ensure it spans the full container */
+            flex-wrap: nowrap; /* Prevents wrapping */
         }
+        
         .column {
-            width: 32%; /* Adjust width so three columns fit nicely */
+            width: 30%; /* Instead of 32% */
+            min-width: 200px; /* Ensures enough space for items */
             padding: 20px;
-            
             text-align: left;
         }
         .vault {
@@ -76,17 +79,28 @@
             filter: invert(1);
         }
         .item-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap instead of stacking */
+            justify-content: flex-start; /* Align items to the left */
             gap: 10px;
             padding: 10px;
+            max-width: 100%; /* Ensure it doesn't overflow */
         }
         
-        .item {
+        .item-container {
             box-sizing: border-box;
             contain: layout paint style;
             cursor: grab;
-            width: var(--item-size);
+            width: var(--item-size); /* Use the same size as the item */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end; /* Align the power at the bottom */
+            border: 2px solid white; /* Add a white border around the item */
+            background-color: white;
+            padding: 4px; /* Add space around the content inside the item */
+            gap: 4px; /* Space between the icon and the power */
+            margin-bottom: 4px; /* Space between each item */
         }
         
         .item-icon {
@@ -94,7 +108,123 @@
             height: 50px;
             object-fit: cover;
             border-radius: 5px;
+           
         }
+        
+        .item-power {
+            font-size: 14px; /* Adjust the font size for the power */
+            color: rgb(26, 25, 25);
+            text-align: right;
+            width: 100%;
+        }
+        .store-section {
+            background-color: #eeeeee00;
+            color: #444;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            transition: 0.4s;
+        }
+        .active, .store-section:hover {
+            background-color: #cccccc00;
+        }
+        .panel {
+            padding: 0 18px;
+            background-color: rgba(255, 255, 255, 0);
+            display: none;
+            overflow: hidden;
+        }
+
+        .hunter-category {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #44444400;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0);
+            width: 200px; /* Slightly larger than 150px to prevent overflow */
+        }
+        
+        .hunter-category h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+        
+        .category-items {
+            display: grid;
+            grid-template-columns: repeat(3, 70px); /* 3 columns of 50px each */
+            grid-template-rows: repeat(3, 70px); /* 3 rows of 50px each */
+            gap: 5px;
+            width: 150px; /* Ensure it fits */
+            height: auto; /* Maintain grid size */
+            justify-content: center;
+        }
+        
+        .hunter-inventory-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0);
+            padding: 5px;
+            border-radius: 5px;
+            width: 50px;
+            height: 50px;
+        }
+
+        .warlock-category {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #44444400;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0);
+            width: 160px; /* Slightly larger than 150px to prevent overflow */
+        }
+        
+        .warlock-category h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+
+        .warlock-inventory-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0);
+            padding: 5px;
+            border-radius: 5px;
+            width: 50px;
+            height: 50px;
+        }
+        .titan-category {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #44444400;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0);
+            width: 160px; /* Slightly larger than 150px to prevent overflow */
+        }
+        
+        .titan-category h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+
+        .titan-inventory-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0);
+            padding: 5px;
+            border-radius: 5px;
+            width: 50px;
+            height: 50px;
+        }
+        
     </style>
 </head>
 <body>
@@ -109,7 +239,6 @@
                         <span class="power" id="hunter-power">Power: --</span>
                     </div>
                     <div class="stats" id="hunter-stats"></div>
-                    <div style="margin-top:70px;" id="hunter-inventory-loading">Loading inventory data...</div>
                     <div style="margin-top:70px;" id="hunter-inventory-items" class="item-grid"></div>
                 </div>
                 
@@ -120,7 +249,6 @@
                         <span class="power" id="warlock-power">Power: --</span>
                     </div>
                     <div class="stats" id="warlock-stats"></div>
-                    <div style="margin-top:70px;" id="warlock-inventory-loading">Loading inventory data...</div>
                     <div style="margin-top:70px;" id="warlock-inventory-items" class="item-grid"></div>
                 </div>
                 
@@ -131,7 +259,6 @@
                         <span class="power" id="titan-power">Power: --</span>
                     </div>
                     <div class="stats" id="titan-stats"></div>
-                    <div style="margin-top:70px;" id="titan-inventory-loading">Loading inventory data...</div>
                     <div style="margin-top:70px;" id="titan-inventory-items" class="item-grid"></div>
                 </div>
             </div>
@@ -146,6 +273,25 @@
     </div>
 
     <script>
+        var acc = document.getElementsByClassName("store-section");
+        var i;
+
+        for (i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+            /* Toggle between adding and removing the "active" class,
+            to highlight the button that controls the panel */
+            this.classList.toggle("active");
+
+            /* Toggle between hiding and showing the active panel */
+            var panel = this.nextElementSibling;
+            if (panel.style.display === "block") {
+            panel.style.display = "none";
+            } else {
+            panel.style.display = "block";
+            }
+        });
+        }
+        
         const params = new URLSearchParams(window.location.search);
         const userName = params.get("user") || "Guardian";
         document.getElementById("welcome-message").textContent = `Welcome, ${userName}!`;
@@ -200,105 +346,90 @@
             }
         }
     
-        async function fetchHunterInventoryData() {
-            try {   
-                let response = await fetch('/api/hunterinventory', { credentials: 'include' });
+        async function fetchInventoryData(characterType) {
+            try {
+                let response = await fetch(`/api/${characterType}inventory`, { credentials: 'include' });
                 let data = await response.json();
-    
+            
                 if (data.error) {
-                    console.error("Error fetching inventory data:", data.error);
+                    console.error(`Error fetching ${characterType} inventory data:`, data.error);
                     return;
-                }
-    
-                console.log("Inventory Data:", data);
-    
-
-                let hunterContainer = document.getElementById("hunter-inventory-items");
-                if (!hunterContainer) {
-                    console.error("Container not found!");
-                    return;
-                }
-                hunterContainer.innerHTML = data.inventoryItems.length > 0
-                    ? data.inventoryItems.map(item => `
-                        <div class="hunter-inventory-item" draggable="true">
-                            <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span>${item.lightLevel}</span>
-                        </div>
-                    `).join("")
-                    : "<p>No items found.</p>";
                 }
             
-                catch (error) {
-                    console.error("Failed to fetch inventory data", error);
-                }
-        }
-
-        async function fetchWarlockInventoryData() {
-            try {   
-                let response = await fetch('/api/warlockinventory', { credentials: 'include' });
-                let data = await response.json();
-    
-                if (data.error) {
-                    console.error("Error fetching inventory data:", data.error);
+                console.log(`${characterType} Inventory Data:`, data);
+            
+                let containerId = `${characterType}-inventory-items`;  // Dynamic container ID
+                let inventoryContainer = document.getElementById(containerId);
+            
+                if (!inventoryContainer) {
+                    console.error(`Container ${containerId} not found!`);
                     return;
-                }
-    
-                console.log("Inventory Data:", data);
-    
-
-                let warlockContainer = document.getElementById("warlock-inventory-items");
-                if (!warlockContainer) {
-                    console.error("Container not found!");
-                    return;
-                }
-                warlockContainer.innerHTML = data.inventoryItems.length > 0
-                    ? data.inventoryItems.map(item => `
-                        <div class="warlock-inventory-item" draggable="true">
-                            <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span>${item.lightLevel}</span>
-                        </div>
-                    `).join("")
-                    : "<p>No items found.</p>";
                 }
             
-                catch (error) {
-                    console.error("Failed to fetch inventory data", error);
-                }
-        }
-
-        async function fetchTitanInventoryData() {
-            try {   
-                let response = await fetch('/api/titaninventory', { credentials: 'include' });
-                let data = await response.json();
-    
-                if (data.error) {
-                    console.error("Error fetching inventory data:", data.error);
-                    return;
-                }
-    
-                console.log("Inventory Data:", data);
-    
-
-                let titanContainer = document.getElementById("titan-inventory-items");
-                if (!titanContainer) {
-                    console.error("Container not found!");
-                    return;
-                }
-                titanContainer.innerHTML = data.inventoryItems.length > 0
-                    ? data.inventoryItems.map(item => `
-                        <div class="titan-inventory-item" draggable="true">
-                            <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span>${item.lightLevel}</span>
-                        </div>
-                    `).join("")
-                    : "<p>No items found.</p>";
+                // Clear previous content
+                inventoryContainer.innerHTML = "";
+            
+                // Define bucket categories in the correct order
+                const bucketCategories = {
+                    1498876634: "Kinetic Weapons",
+                    2465295065: "Energy Weapons",
+                    953998645: "Power Weapons",
+                    3448274439: "Helmet",
+                    3551918588: "Gauntlets",
+                    14239492: "Chest Armor",
+                    20886954: "Leg Armor",
+                    1585787867: "Class Armor"
+                };
+            
+                // Create category divs in the correct order first
+                let categoryDivs = {};
+                for (const bucket in bucketCategories) {
+                    let div = document.createElement("div");
+                    div.classList.add(`${characterType}-category`, "category");
+                    div.id = bucketCategories[bucket];
+                    div.innerHTML = `<h3>${bucketCategories[bucket]}</h3>
+                        <div class="category-items"></div>`; // Grid container
+                    inventoryContainer.appendChild(div);
+                    categoryDivs[bucket] = div.querySelector(".category-items"); // Store reference to inner div for items
                 }
             
-                catch (error) {
-                    console.error("Failed to fetch inventory data", error);
-                }
+                // Append items to the correct category div
+                data.inventoryItems.forEach(item => {
+                    let categoryName = bucketCategories[item.bucketHash] || "Unknown";
+                    let categoryDiv = categoryDivs[item.bucketHash];
+            
+                    if (categoryDiv) {
+                        let itemDiv = document.createElement("div");
+                        itemDiv.classList.add(`${characterType}-inventory-item`);
+                        itemDiv.id = categoryName;
+                        itemDiv.draggable = false;
+                        itemDiv.innerHTML = `
+                        <div class="item-container" draggable="true">
+                            <img src="${item.icon}" class="item-icon" title="${item.name}"alt="Item" draggable="false">
+                            <div class="stat">
+                                ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
+                                <span class="item-power">${item.lightLevel}</span>
+                            </div>
+                        </div>
+                        `;
+                        categoryDiv.appendChild(itemDiv); // Append to the correct section
+                    }
+                });
+            
+                // Sort categories based on the predefined order
+                const order = ["Kinetic Weapons", "Energy Weapons", "Power Weapons", "Helmet", "Gauntlets", "Chest Armor", "Leg Armor", "Class Armor"];
+                const categories = inventoryContainer.querySelectorAll('.category');
+                const sortedCategories = Array.from(categories).sort((a, b) => {
+                    return order.indexOf(a.querySelector('h3').textContent) - order.indexOf(b.querySelector('h3').textContent);
+                });
+            
+                sortedCategories.forEach(category => inventoryContainer.appendChild(category));
+            
+            } catch (error) {
+                console.error(`Failed to fetch ${characterType} inventory data`, error);
+            }
         }
-    
+   
         async function fetchVaultData() {
             try {
                 let response = await fetch('/api/vault', { credentials: 'include' }); // Ensures session cookies are sent
@@ -319,9 +450,9 @@
     
                 vaultContainer.innerHTML = data.vaultItems.length > 0
                     ? data.vaultItems.map(item => `
-                        <div class="vault-item" draggable="true">
+                        <div class="vault-item" title="${item.name}" draggable="true">
                             <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span>${item.lightLevel}</span>
+                            <span class="power">${item.lightLevel}</span>
                         </div>
                     `).join("")
                     : "<p>No items found.</p>";
@@ -331,38 +462,11 @@
             }
         }
     
-        window.onload = async function() {
-            try {
-                const response = await fetch('/api/vault', { credentials: 'include' }); // No need for `user=${user}` here
-                if (!response.ok) {
-                    throw new Error('Failed to load vault data');
-                }
-    
-                const data = await response.json();
-                document.getElementById('vault-loading').style.display = 'none';
-    
-                const vaultItemsGrid = document.getElementById('vault-items');
-                vaultItemsGrid.innerHTML = ''; // Clear any previous content in the grid
-    
-                data.vaultItems.forEach(item => {
-                    const vaultItemDiv = document.createElement('div');
-                    vaultItemDiv.classList.add('vault-item');
-                    vaultItemDiv.innerHTML = `
-                        <img src="${item.icon}" class="item-icon" alt="Item">
-                        <span>${item.lightLevel}</span>
-                        ${item.power ? `<div class="vault-item-power">Power: ${item.power}</div>` : ""}
-                    `;
-                    vaultItemsGrid.appendChild(vaultItemDiv);
-                });
-    
-            } catch (error) {
-                console.error('Error loading vault data:', error);
-            }
-        };
         
-        fetchTitanInventoryData();
-        fetchWarlockInventoryData();
-        fetchHunterInventoryData();
+        
+        fetchInventoryData('hunter');
+        fetchInventoryData('warlock');
+        fetchInventoryData('titan');
         fetchVaultData();
         fetchCharacterData();
     </script>
