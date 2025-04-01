@@ -157,10 +157,50 @@
             display: grid;
             grid-template-columns: repeat(3, 70px); /* 3 columns of 50px each */
             grid-template-rows: repeat(3, 70px); /* 3 rows of 50px each */
-            gap: 5px;
+            column-gap: 3px;
+            row-gap: 20px;
+            width: 150px; /* Ensure it fits */
+            height: 650px;
+            justify-content: center;
+            transform: translateX(100px); /* Move items 50px to the right */
+
+        }
+
+        .vault-category-items {
+            display: grid;
+            grid-template-columns: repeat(12, 70px); 
+            grid-template-rows: repeat(7, 70px);
+            column-gap: 3px; /* Horizontal gap */
+            row-gap: 20px; /* Vertical gap */
             width: 150px; /* Ensure it fits */
             height: auto; /* Maintain grid size */
-            justify-content: center;
+            justify-content: left;
+        }
+
+        .vault-category {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #44444400;
+            border-radius: 5px;
+            background-color: rgba(0, 0, 0, 0);
+            width: 160px; /* Slightly larger than 150px to prevent overflow */
+        }
+        
+        .vault-category h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+
+        .vault-inventory-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0);
+            padding: 5px;
+            border-radius: 5px;
+            width: 50px;
+            height: 50px;
         }
         
         .hunter-inventory-item {
@@ -239,7 +279,40 @@
                         <span class="power" id="hunter-power">Power: --</span>
                     </div>
                     <div class="stats" id="hunter-stats"></div>
-                    <div style="margin-top:70px;" id="hunter-inventory-items" class="item-grid"></div>
+                    <div style="margin-top:70px;" id="hunter-inventory-items" class="item-grid">
+                        <div class="hunter-category category" id="Kinetic Weapons">
+                            <h3>Kinetic Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Energy Weapons">
+                            <h3>Energy Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Power Weapons">
+                            <h3>Power Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Helmet">
+                            <h3>Helmet</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Gauntlets">
+                            <h3>Gauntlets</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Chest Armor">
+                            <h3>Chest Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Leg Armor">
+                            <h3>Leg Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="hunter-category category" id="Class Armor">
+                            <h3>Class Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="column" id="warlock">
@@ -249,7 +322,40 @@
                         <span class="power" id="warlock-power">Power: --</span>
                     </div>
                     <div class="stats" id="warlock-stats"></div>
-                    <div style="margin-top:70px;" id="warlock-inventory-items" class="item-grid"></div>
+                    <div style="margin-top:70px;" id="warlock-inventory-items" class="item-grid">
+                        <div class="warlock-category category" id="Kinetic Weapons">
+                            <h3>Kinetic Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Energy Weapons">
+                            <h3>Energy Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Power Weapons">
+                            <h3>Power Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Helmet">
+                            <h3>Helmet</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Gauntlets">
+                            <h3>Gauntlets</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Chest Armor">
+                            <h3>Chest Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Leg Armor">
+                            <h3>Leg Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="warlock-category category" id="Class Armor">
+                            <h3>Class Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="column" id="titan">
@@ -259,15 +365,80 @@
                         <span class="power" id="titan-power">Power: --</span>
                     </div>
                     <div class="stats" id="titan-stats"></div>
-                    <div style="margin-top:70px;" id="titan-inventory-items" class="item-grid"></div>
+                    <div style="margin-top:70px;" id="titan-inventory-items" class="item-grid">
+                        <div class="titan-category category" id="Kinetic Weapons">
+                            <h3>Kinetic Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Energy Weapons">
+                            <h3>Energy Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Power Weapons">
+                            <h3>Power Weapons</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Helmet">
+                            <h3>Helmet</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Gauntlets">
+                            <h3>Gauntlets</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Chest Armor">
+                            <h3>Chest Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Leg Armor">
+                            <h3>Leg Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                        <div class="titan-category category" id="Class Armor">
+                            <h3>Class Armor</h3>
+                            <div class="category-items"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="vault">
             <h2>Vault</h2>
-            <div id="vault-loading" class="loading">Loading vault items...</div>
-            <div id="vault-items" class="item-grid"></div>
+            <div style="margin-top:250px" id="vault-items" class="item-grid">
+                <div class="vault-category category" id="Kinetic Weapons" style="width: 100%;">
+                    <h3>Kinetic Weapons</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Energy Weapons"style="width: 100%;">
+                    <h3>Energy Weapons</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Power Weapons"style="width: 100%;">
+                    <h3>Power Weapons</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Helmet"style="width: 100%;">
+                    <h3>Helmet</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Gauntlets"style="width: 100%;">
+                    <h3>Gauntlets</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Chest Armor" style="width: 100%;">
+                    <h3>Chest Armor</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Leg Armor"style="width: 100%;">
+                    <h3>Leg Armor</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+                <div class="vault-category category" id="Class Armor"style="width: 100%;">
+                    <h3>Class Armor</h3>
+                    <div class="vault-category-items"></div>
+                </div>
+            </div>
 
         </div>
     </div>
@@ -348,125 +519,141 @@
     
         async function fetchInventoryData(characterType) {
             try {
-                let response = await fetch(`/api/${characterType}inventory`, { credentials: 'include' });
-                let data = await response.json();
+            let response = await fetch(`/api/${characterType}inventory`, { credentials: 'include' });
+            let data = await response.json();
             
-                if (data.error) {
-                    console.error(`Error fetching ${characterType} inventory data:`, data.error);
-                    return;
+            if (data.error) {
+                console.error(`Error fetching ${characterType} inventory data:`, data.error);
+                return;
+            }
+            
+            console.log(`${characterType} Inventory Data:`, data);
+            
+            let containerId = `${characterType}-inventory-items`;  // Dynamic container ID
+            let inventoryContainer = document.getElementById(containerId);
+            
+            if (!inventoryContainer) {
+                console.error(`Container ${containerId} not found!`);
+                return;
+            }
+            
+            // Define bucket categories
+            const bucketCategories = {
+                1498876634: "Kinetic Weapons",
+                2465295065: "Energy Weapons",
+                953998645: "Power Weapons",
+                3448274439: "Helmet",
+                3551918588: "Gauntlets",
+                14239492: "Chest Armor",
+                20886954: "Leg Armor",
+                1585787867: "Class Armor"
+            };
+            
+            // Append items to the existing category divs
+            data.inventoryItems.forEach(item => {
+                let categoryName = bucketCategories[item.bucketHash] || "Unknown";
+                let categoryDiv = inventoryContainer.querySelector(`.category[id="${categoryName}"] .category-items`);
+            
+                if (categoryDiv) {
+                let itemDiv = document.createElement("div");
+                itemDiv.classList.add(`${characterType}-inventory-item`);
+                itemDiv.draggable = false;
+                itemDiv.innerHTML = `
+                <div class="item-container" draggable="true">
+                    <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
+                    <div class="stat">
+                    ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
+                    <span class="item-power">${item.lightLevel}</span>
+                    </div>
+                </div>
+                `;
+                categoryDiv.appendChild(itemDiv); // Append to the correct section
                 }
-            
-                console.log(`${characterType} Inventory Data:`, data);
-            
-                let containerId = `${characterType}-inventory-items`;  // Dynamic container ID
-                let inventoryContainer = document.getElementById(containerId);
-            
-                if (!inventoryContainer) {
-                    console.error(`Container ${containerId} not found!`);
-                    return;
-                }
-            
-                // Clear previous content
-                inventoryContainer.innerHTML = "";
-            
-                // Define bucket categories in the correct order
-                const bucketCategories = {
-                    1498876634: "Kinetic Weapons",
-                    2465295065: "Energy Weapons",
-                    953998645: "Power Weapons",
-                    3448274439: "Helmet",
-                    3551918588: "Gauntlets",
-                    14239492: "Chest Armor",
-                    20886954: "Leg Armor",
-                    1585787867: "Class Armor"
-                };
-            
-                // Create category divs in the correct order first
-                let categoryDivs = {};
-                for (const bucket in bucketCategories) {
-                    let div = document.createElement("div");
-                    div.classList.add(`${characterType}-category`, "category");
-                    div.id = bucketCategories[bucket];
-                    div.innerHTML = `<h3>${bucketCategories[bucket]}</h3>
-                        <div class="category-items"></div>`; // Grid container
-                    inventoryContainer.appendChild(div);
-                    categoryDivs[bucket] = div.querySelector(".category-items"); // Store reference to inner div for items
-                }
-            
-                // Append items to the correct category div
-                data.inventoryItems.forEach(item => {
-                    let categoryName = bucketCategories[item.bucketHash] || "Unknown";
-                    let categoryDiv = categoryDivs[item.bucketHash];
-            
-                    if (categoryDiv) {
-                        let itemDiv = document.createElement("div");
-                        itemDiv.classList.add(`${characterType}-inventory-item`);
-                        itemDiv.id = categoryName;
-                        itemDiv.draggable = false;
-                        itemDiv.innerHTML = `
-                        <div class="item-container" draggable="true">
-                            <img src="${item.icon}" class="item-icon" title="${item.name}"alt="Item" draggable="false">
-                            <div class="stat">
-                                ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
-                                <span class="item-power">${item.lightLevel}</span>
-                            </div>
-                        </div>
-                        `;
-                        categoryDiv.appendChild(itemDiv); // Append to the correct section
-                    }
-                });
-            
-                // Sort categories based on the predefined order
-                const order = ["Kinetic Weapons", "Energy Weapons", "Power Weapons", "Helmet", "Gauntlets", "Chest Armor", "Leg Armor", "Class Armor"];
-                const categories = inventoryContainer.querySelectorAll('.category');
-                const sortedCategories = Array.from(categories).sort((a, b) => {
-                    return order.indexOf(a.querySelector('h3').textContent) - order.indexOf(b.querySelector('h3').textContent);
-                });
-            
-                sortedCategories.forEach(category => inventoryContainer.appendChild(category));
+            });
             
             } catch (error) {
-                console.error(`Failed to fetch ${characterType} inventory data`, error);
+            console.error(`Failed to fetch ${characterType} inventory data`, error);
             }
         }
    
         async function fetchVaultData() {
             try {
-                let response = await fetch('/api/vault', { credentials: 'include' }); // Ensures session cookies are sent
-                let data = await response.json();
-    
-                if (data.error) {
-                    console.error("Error fetching vault data:", data.error);
-                    return;
-                }
-    
-                let vaultContainer = document.getElementById("vault-items");
-                if (!vaultContainer) {
-                    console.error("Vault container not found!");
-                    return;
-                }
+            let response = await fetch('/api/vault', { credentials: 'include' });
+            let data = await response.json();
 
-                console.log("Vault Data:", data);
-    
-                vaultContainer.innerHTML = data.vaultItems.length > 0
-                    ? data.vaultItems.map(item => `
-                        <div class="vault-item" title="${item.name}" draggable="true">
-                            <img src="${item.icon}" class="item-icon" alt="Item">
-                            <span class="power">${item.lightLevel}</span>
-                        </div>
-                    `).join("")
-                    : "<p>No items found.</p>";
-    
+            if (data.error) {
+                console.error("Error fetching vault data:", data.error);
+                return;
+            }
+
+            console.log("Vault Data:", data);
+
+            let vaultContainer = document.getElementById("vault-items");
+            if (!vaultContainer) {
+                console.error("Vault container not found!");
+                return;
+            }
+
+            // Define bucket categories
+            const bucketCategories = {
+                1498876634: "Kinetic Weapons",
+                2465295065: "Energy Weapons",
+                953998645: "Power Weapons",
+                3448274439: "Helmet",
+                3551918588: "Gauntlets",
+                14239492: "Chest Armor",
+                20886954: "Leg Armor",
+                1585787867: "Class Armor"
+            };
+
+            // Append items to the existing category divs
+            data.vaultItems.forEach(item => {
+                let categoryName = bucketCategories[item.bucketHash];
+                if (!categoryName) {
+                    console.warn(`Unrecognized bucketHash: ${item.bucketHash}`);
+                    return; // Skip items with unrecognized bucketHash
+                }
+                let categoryDiv = vaultContainer.querySelector(`.vault-category[id="${categoryName}"] .vault-category-items`);
+
+                if (categoryDiv) {
+                let itemDiv = document.createElement("div");
+                itemDiv.classList.add("vault-inventory-item");
+                itemDiv.draggable = false;
+                itemDiv.innerHTML = `
+                <div class="item-container" draggable="true">
+                    <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
+                    <div class="stat">
+                    ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
+                    <span class="item-power">${item.lightLevel}</span>
+                    </div>
+                </div>
+                `;
+                categoryDiv.appendChild(itemDiv); // Append to the correct section
+                }
+            });
+
             } catch (error) {
-                console.error("Failed to fetch vault data", error);
+            console.error("Failed to fetch vault data", error);
             }
         }
     
-        
+        async function fetchEquippedData(CharacterType){
+                try {
+                  let response = await fetch(`/api/${CharacterType}equipment`, { credentials: 'include' });
+                    let data = await response.json();
+                    console.log(`${CharacterType} Equipped Data:`, data);
+
+
+                }
+             catch (error) {
+            console.error(`Failed to fetch ${CharacterType} equipped data`, error);
+            }
+        }
         
         fetchInventoryData('hunter');
         fetchInventoryData('warlock');
         fetchInventoryData('titan');
+        fetchEquippedData('hunter');
         fetchVaultData();
         fetchCharacterData();
     </script>

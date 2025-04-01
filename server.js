@@ -605,7 +605,8 @@ app.get('/api/vault', async (req, res) => {
                     return {
                         itemInstanceId: instanceId,
                         bucketHash: itemData.item.data.bucketHash,
-                        lightLevel: itemData.instance.data.primaryStat.value // Get the light level
+                        lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        damageType: itemData.instance.data.damageTypeHash
                     };
                 }
                 return null; // If no light level is found
@@ -617,17 +618,40 @@ app.get('/api/vault', async (req, res) => {
 
         const lightLevels = await Promise.all(lightLevelPromises);
 
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
+
         // Map the fetched definitions and light levels to the vault items
         const vaultWithImagesAndLightLevels = filteredVaultItems
             .map(item => {
                 const definition = itemDefinitions.find(def => def.hash === item.itemHash);
                 const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
                 return {
                     name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
                     itemHash: item.itemHash,
                     quantity: item.quantity,
                     itemInstanceId: item.itemInstanceId,
-                    bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
+                    bucketHash: definition ? definition.bucketTypeHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null
                 };
@@ -687,6 +711,388 @@ app.get('/character-data', async (req, res) => {
     }
 });
 
+app.get('/api/hunterequipment', async (req, res) => {
+    try {
+        const { membershipId, membershipType, characterIds } = req.session;
+
+        if (!membershipId || !membershipType || !characterIds) {
+            return res.status(400).json({ error: "Missing session data. Ensure you have fetched characters first." });
+        }
+
+        const hunterCharacterId = characterIds[0]; // Assuming characterIds[0] is the Hunter
+
+        if (!hunterCharacterId) {
+            return res.status(500).json({ error: "Hunter character ID not found." });
+        }
+
+        console.log(`Fetching equipment for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${hunterCharacterId}`);
+
+        const equipmentUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Character/${hunterCharacterId}/?components=205`;
+        const equipmentResponse = await axios.get(equipmentUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        const equipmentData = equipmentResponse.data.Response.equipment.data.items || [];
+
+        if (!equipmentData || equipmentData.length === 0) {
+            return res.status(404).json({ error: "No equipment found for Hunter." });
+        }
+
+        // Get the first 8 items
+        const firstEightItems = equipmentData.slice(0, 8);
+        const itemHashes = firstEightItems.map(item => item.itemHash);
+        const itemInstanceIds = firstEightItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
+
+        console.log(`Fetching definitions for ${itemHashes.length} HE items...`);
+
+        // Fetch item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        bucketHash: itemData.item.data.bucketHash,
+                        lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        damageType: itemData.instance.data.damageTypeHash
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
+
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
+
+        // Map the fetched definitions and light levels to the equipment items
+        const equipmentWithDetails = firstEightItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
+                return {
+                    name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: definition ? definition.bucketTypeHash : null,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${equipmentWithDetails.length} hunter equipment items with details.`);
+        res.json({ equipment: equipmentWithDetails });
+
+
+        
+    } catch (error) {
+        console.error("Error fetching Hunter equipment:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve Hunter equipment" });
+    }
+});
+
+app.get('/api/warlockequipment', async (req, res) => {
+    try {
+        const { membershipId, membershipType, characterIds } = req.session;
+
+        if (!membershipId || !membershipType || !characterIds) {
+            return res.status(400).json({ error: "Missing session data. Ensure you have fetched characters first." });
+        }
+
+        const warlockCharacterId = characterIds[1]; 
+
+        if (!warlockCharacterId) {
+            return res.status(500).json({ error: "Warlock character ID not found." });
+        }
+
+        console.log(`Fetching equipment for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${warlockCharacterId}`);
+
+        const equipmentUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Character/${warlockCharacterId}/?components=205`;
+        const equipmentResponse = await axios.get(equipmentUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        const equipmentData = equipmentResponse.data.Response.equipment.data.items || [];
+
+        if (!equipmentData || equipmentData.length === 0) {
+            return res.status(404).json({ error: "No equipment found for Warlock." });
+        }
+
+        // Get the first 8 items
+        const firstEightItems = equipmentData.slice(0, 8);
+        const itemHashes = firstEightItems.map(item => item.itemHash);
+        const itemInstanceIds = firstEightItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
+
+        // Fetch item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        bucketHash: itemData.item.data.bucketHash,
+                        lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        damageType: itemData.instance.data.damageTypeHash
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
+
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
+
+        // Map the fetched definitions and light levels to the equipment items
+        const equipmentWithDetails = firstEightItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
+                return {
+                    name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: definition ? definition.bucketTypeHash : null,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${equipmentWithDetails.length} warlock equipment items with details.`);
+        res.json({ equipment: equipmentWithDetails });
+    } catch (error) {
+        console.error("Error fetching Warlock equipment:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve Warlock equipment" });
+    }
+});
+
+app.get('/api/titanequipment', async (req, res) => {
+    try {
+        const { membershipId, membershipType, characterIds } = req.session;
+
+        if (!membershipId || !membershipType || !characterIds) {
+            return res.status(400).json({ error: "Missing session data. Ensure you have fetched characters first." });
+        }
+
+        const titanCharacterId = characterIds[2]; 
+
+        if (!titanCharacterId) {
+            return res.status(500).json({ error: "Titan character ID not found." });
+        }
+
+        console.log(`Fetching equipment for membershipId: ${membershipId}, membershipType: ${membershipType}, characterId: ${titanCharacterId}`);
+
+        const equipmentUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Character/${titanCharacterId}/?components=205`;
+        const equipmentResponse = await axios.get(equipmentUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        const equipmentData = equipmentResponse.data.Response.equipment.data.items || [];
+
+        if (!equipmentData || equipmentData.length === 0) {
+            return res.status(404).json({ error: "No equipment found for Titan." });
+        }
+
+        // Get the first 8 items
+        const firstEightItems = equipmentData.slice(0, 8);
+        const itemHashes = firstEightItems.map(item => item.itemHash);
+        const itemInstanceIds = firstEightItems.map(item => item.itemInstanceId).filter(id => id); // Remove null values
+
+        // Fetch item definitions in parallel using Promise.all
+        const definitionsPromises = itemHashes.map(hash => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${hash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: hash,
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash
+                    };
+                }
+            }).catch(err => {
+                console.error(`Error fetching definition for item ${hash}:`, err.message);
+            })
+        );
+
+        const itemDefinitions = await Promise.all(definitionsPromises);
+
+        // Fetch item light levels (primaryStat value) for each item instance
+        const lightLevelPromises = itemInstanceIds.map(instanceId => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${instanceId}/?components=300,307`, {
+                headers: { 'X-API-KEY': API_KEY, Authorization: `Bearer ${req.session.accessToken}` }
+            }).then(itemResponse => {
+                const itemData = itemResponse.data.Response;
+                if (itemData?.instance?.data?.primaryStat) {
+                    return {
+                        itemInstanceId: instanceId,
+                        bucketHash: itemData.item.data.bucketHash,
+                        lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        damageType: itemData.instance.data.damageTypeHash
+                    };
+                }
+                return null; // If no light level is found
+            }).catch(err => {
+                console.error(`Error fetching light level for item ${instanceId}:`, err.message);
+                return null;
+            })
+        );
+
+        const lightLevels = await Promise.all(lightLevelPromises);
+
+        const damageTypePromises = lightLevels
+            .filter(data => data?.damageType) // Ensure damageType exists
+            .map(data =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyDamageTypeDefinition/${data.damageType}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(damageResponse => {
+                if (damageResponse.data.Response) {
+                return {
+                    damageTypeHash: data.damageType,
+                    damageTypeName: damageResponse.data.Response.displayProperties.name,
+                    damageTypeIcon: `https://www.bungie.net${damageResponse.data.Response.displayProperties.icon}`
+                };
+                }
+            }).catch(err => {
+                console.error(`Error fetching damage type for hash ${data.damageType}:`, err.message);
+            })
+            );
+
+        const damageTypeDefinitions = await Promise.all(damageTypePromises);
+
+        // Map the fetched definitions and light levels to the equipment items
+        const equipmentWithDetails = firstEightItems
+            .map(item => {
+                const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+                const lightLevelData = lightLevels.find(data => data?.itemInstanceId === item.itemInstanceId);
+                const damageTypeData = damageTypeDefinitions.find(data => data?.damageTypeHash === lightLevelData?.damageType);
+                return {
+                    name: definition ? definition.name : null,
+                    dName: damageTypeData ? damageTypeData.damageTypeName : null,
+                    dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
+                    itemHash: item.itemHash,
+                    quantity: item.quantity,
+                    itemInstanceId: item.itemInstanceId,
+                    bucketHash: definition ? definition.bucketTypeHash : null,
+                    icon: definition ? definition.icon : null,
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                };
+            })
+            .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
+
+        console.log(`Returning ${equipmentWithDetails.length} titan equipment items with details.`);
+        res.json({ equipment: equipmentWithDetails });
+    } catch (error) {
+        console.error("Error fetching Titan equipment:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve Titan equipment" });
+    }
+});
 
 // Load SSL certificates
 const options = {
