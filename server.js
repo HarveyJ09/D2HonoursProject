@@ -219,10 +219,33 @@ app.get('/api/hunterinventory', async (req, res) => {
             }).then(definitionResponse => {
                 if (definitionResponse.data.Response) {
                     return {
-                        name: definitionResponse.data.Response.displayProperties.name,
                         hash: hash,
-                        
-                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash,
+                        itemTypeDisplayName: definitionResponse.data.Response.itemTypeDisplayName,
+                        statImpact: definitionResponse.data.Response.stats?.stats?.["4043523819"]?.value || "N/A",
+                        statRange: definitionResponse.data.Response.stats?.stats?.["1240592695"]?.value || "N/A",
+                        statStability: definitionResponse.data.Response.stats?.stats?.["155624089"]?.value || "N/A",
+                        statHandling: definitionResponse.data.Response.stats?.stats?.["943549884"]?.value || "N/A",
+                        statReloadSpeed: definitionResponse.data.Response.stats?.stats?.["4188031367"]?.value || "N/A",
+                        statAA: definitionResponse.data.Response.stats?.stats?.["1345609583"]?.value || "N/A",
+                        statAirborne: definitionResponse.data.Response.stats?.stats?.["2714457168"]?.value || "N/A",
+                        statZoom: definitionResponse.data.Response.stats?.stats?.["3555269338"]?.value || "N/A",
+                        statRPM: definitionResponse.data.Response.stats?.stats?.["4284893193"]?.value || "N/A",
+                        statBR: definitionResponse.data.Response.stats?.stats?.["3614673599"]?.value || "N/A",
+                        statVelocity: definitionResponse.data.Response.stats?.stats?.["2523465841"]?.value || "N/A",
+                        statPower: definitionResponse.data.Response.stats?.stats?.["1935470627"]?.value || "N/A",
+                        statGR: definitionResponse.data.Response.stats?.stats?.["209426660"]?.value || "N/A",
+                        statAC: definitionResponse.data.Response.stats?.stats?.["925767036"]?.value || "N/A",
+                        statIS: definitionResponse.data.Response.stats?.stats?.["1931675084"]?.value || "N/A",
+                        statGE: definitionResponse.data.Response.stats?.stats?.["2762071195"]?.value || "N/A",
+                        statSS: definitionResponse.data.Response.stats?.stats?.["2837207746"]?.value || "N/A",
+                        statCT: definitionResponse.data.Response.stats?.stats?.["2961396640"]?.value || "N/A",
+                        statCR: definitionResponse.data.Response.stats?.stats?.["3022301683"]?.value || "N/A",
+                        statSD: definitionResponse.data.Response.stats?.stats?.["1842278586"]?.value || "N/A",
+                        statDT: definitionResponse.data.Response.stats?.stats?.["447667954"]?.value || "N/A",
+                        statAccuracy: definitionResponse.data.Response.stats?.stats?.["1591432999"]?.value || "N/A",
                     };
                 }
             }).catch(err => {
@@ -253,6 +276,51 @@ app.get('/api/hunterinventory', async (req, res) => {
         );
         
         const lightLevels = await Promise.all(lightLevelPromises);
+
+        const armorBucketHashes = [
+            3448274439, // Helmet
+            3551918588, // Gauntlets
+            14239492,   // Chest Armor
+            20886954,   // Leg Armor
+            1585787867  // Class Armor
+        ];
+
+        // Filter for armor items
+        const armorItems = inventoryItems.filter(item => {
+            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+            return definition && armorBucketHashes.includes(definition.bucketTypeHash);
+        });
+
+        // Fetch armor stats for each armor item
+        const armorStatsPromises = armorItems.map(item => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${item.itemInstanceId}/?components=304`, {
+            headers: { 
+                'X-API-KEY': API_KEY, 
+                Authorization: `Bearer ${req.session.accessToken}` 
+            }
+            }).then(statsResponse => {
+            const statsData = statsResponse.data.Response.stats?.data;
+            if (statsData) {
+                return {
+                itemInstanceId: item.itemInstanceId,
+                stats: {
+                    mobility: statsData.stats[2996146975]?.value || 0,     // Mobility
+                    resilience: statsData.stats[392767087]?.value || 0,    // Resilience
+                    recovery: statsData.stats[1943323491]?.value || 0,     // Recovery
+                    discipline: statsData.stats[1735777505]?.value || 0,   // Discipline
+                    intellect: statsData.stats[144602215]?.value || 0,     // Intellect
+                    strength: statsData.stats[4244567218]?.value || 0      // Strength
+                }
+                };
+            }
+            return null;
+            }).catch(err => {
+            console.error(`Error fetching stats for armor ${item.itemInstanceId}:`, err.message);
+            return null;
+            })
+        );
+
+        const armorStats = await Promise.all(armorStatsPromises);
 
         const damageTypePromises = lightLevels
             .filter(data => data?.damageType) // Ensure damageType exists
@@ -289,7 +357,35 @@ app.get('/api/hunterinventory', async (req, res) => {
                     itemInstanceId: item.itemInstanceId,
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
-                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    impact: definition ? definition.statImpact : "N/A",
+                    range: definition ? definition.statRange : "N/A",
+                    stability: definition ? definition.statStability : "N/A",
+                    handling: definition ? definition.statHandling : "N/A",
+                    reloadspeed: definition ? definition.statReloadSpeed : "N/A",
+                    aimassistance: definition ? definition.statAA : "N/A",
+                    airborne: definition ? definition.statAirborne : "N/A",
+                    zoom: definition ? definition.statZoom : "N/A",
+                    rpm: definition ? definition.statRPM : "N/A",
+                    blastradius: definition ? definition.statBR : "N/A",
+                    velocity: definition ? definition.statVelocity : "N/A",
+                    power: definition ? definition.statPower : "N/A",
+                    guardResistance: definition ? definition.statGR : "N/A",
+                    ammoCapacity: definition ? definition.statAC : "N/A",
+                    inventorySize: definition ? definition.statIS : "N/A",
+                    guardEndurance: definition ? definition.statGE : "N/A",
+                    swingSpeed: definition ? definition.statSS : "N/A",
+                    chargeTime: definition ? definition.statCT : "N/A",
+                    chargeRate: definition ? definition.statCR : "N/A",
+                    shieldDuration: definition ? definition.statSD : "N/A",
+                    drawTime: definition ? definition.statDT : "N/A",
+                    accuracy: definition ? definition.statAccuracy : "N/A",
+                    mobility: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.mobility || 0,
+                    resilience: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.resilience || 0,
+                    recovery: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.recovery || 0,
+                    discipline: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.discipline || 0,
+                    intellect: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.intellect || 0,
+                    strength: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.strength || 0,
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
@@ -348,9 +444,33 @@ app.get('/api/warlockinventory', async (req, res) => {
             }).then(definitionResponse => {
                 if (definitionResponse.data.Response) {
                     return {
-                        name: definitionResponse.data.Response.displayProperties.name,
                         hash: hash,
-                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash,
+                        itemTypeDisplayName: definitionResponse.data.Response.itemTypeDisplayName,
+                        statImpact: definitionResponse.data.Response.stats?.stats?.["4043523819"]?.value || "N/A",
+                        statRange: definitionResponse.data.Response.stats?.stats?.["1240592695"]?.value || "N/A",
+                        statStability: definitionResponse.data.Response.stats?.stats?.["155624089"]?.value || "N/A",
+                        statHandling: definitionResponse.data.Response.stats?.stats?.["943549884"]?.value || "N/A",
+                        statReloadSpeed: definitionResponse.data.Response.stats?.stats?.["4188031367"]?.value || "N/A",
+                        statAA: definitionResponse.data.Response.stats?.stats?.["1345609583"]?.value || "N/A",
+                        statAirborne: definitionResponse.data.Response.stats?.stats?.["2714457168"]?.value || "N/A",
+                        statZoom: definitionResponse.data.Response.stats?.stats?.["3555269338"]?.value || "N/A",
+                        statRPM: definitionResponse.data.Response.stats?.stats?.["4284893193"]?.value || "N/A",
+                        statBR: definitionResponse.data.Response.stats?.stats?.["3614673599"]?.value || "N/A",
+                        statVelocity: definitionResponse.data.Response.stats?.stats?.["2523465841"]?.value || "N/A",
+                        statPower: definitionResponse.data.Response.stats?.stats?.["1935470627"]?.value || "N/A",
+                        statGR: definitionResponse.data.Response.stats?.stats?.["209426660"]?.value || "N/A",
+                        statAC: definitionResponse.data.Response.stats?.stats?.["925767036"]?.value || "N/A",
+                        statIS: definitionResponse.data.Response.stats?.stats?.["1931675084"]?.value || "N/A",
+                        statGE: definitionResponse.data.Response.stats?.stats?.["2762071195"]?.value || "N/A",
+                        statSS: definitionResponse.data.Response.stats?.stats?.["2837207746"]?.value || "N/A",
+                        statCT: definitionResponse.data.Response.stats?.stats?.["2961396640"]?.value || "N/A",
+                        statCR: definitionResponse.data.Response.stats?.stats?.["3022301683"]?.value || "N/A",
+                        statSD: definitionResponse.data.Response.stats?.stats?.["1842278586"]?.value || "N/A",
+                        statDT: definitionResponse.data.Response.stats?.stats?.["447667954"]?.value || "N/A",
+                        statAccuracy: definitionResponse.data.Response.stats?.stats?.["1591432999"]?.value || "N/A",
                     };
                 }
             }).catch(err => {
@@ -382,6 +502,51 @@ app.get('/api/warlockinventory', async (req, res) => {
         );
 
         const lightLevels = await Promise.all(lightLevelPromises);
+
+        const armorBucketHashes = [
+            3448274439, // Helmet
+            3551918588, // Gauntlets
+            14239492,   // Chest Armor
+            20886954,   // Leg Armor
+            1585787867  // Class Armor
+        ];
+
+        // Filter for armor items
+        const armorItems = inventoryItems.filter(item => {
+            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+            return definition && armorBucketHashes.includes(definition.bucketTypeHash);
+        });
+
+        // Fetch armor stats for each armor item
+        const armorStatsPromises = armorItems.map(item => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${item.itemInstanceId}/?components=304`, {
+            headers: { 
+                'X-API-KEY': API_KEY, 
+                Authorization: `Bearer ${req.session.accessToken}` 
+            }
+            }).then(statsResponse => {
+            const statsData = statsResponse.data.Response.stats?.data;
+            if (statsData) {
+                return {
+                itemInstanceId: item.itemInstanceId,
+                stats: {
+                    mobility: statsData.stats[2996146975]?.value || 0,     // Mobility
+                    resilience: statsData.stats[392767087]?.value || 0,    // Resilience
+                    recovery: statsData.stats[1943323491]?.value || 0,     // Recovery
+                    discipline: statsData.stats[1735777505]?.value || 0,   // Discipline
+                    intellect: statsData.stats[144602215]?.value || 0,     // Intellect
+                    strength: statsData.stats[4244567218]?.value || 0      // Strength
+                }
+                };
+            }
+            return null;
+            }).catch(err => {
+            console.error(`Error fetching stats for armor ${item.itemInstanceId}:`, err.message);
+            return null;
+            })
+        );
+
+        const armorStats = await Promise.all(armorStatsPromises);
 
         const damageTypePromises = lightLevels
             .filter(data => data?.damageType) // Ensure damageType exists
@@ -418,7 +583,35 @@ app.get('/api/warlockinventory', async (req, res) => {
                     itemInstanceId: item.itemInstanceId,
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
-                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    impact: definition ? definition.statImpact : "N/A",
+                    range: definition ? definition.statRange : "N/A",
+                    stability: definition ? definition.statStability : "N/A",
+                    handling: definition ? definition.statHandling : "N/A",
+                    reloadspeed: definition ? definition.statReloadSpeed : "N/A",
+                    aimassistance: definition ? definition.statAA : "N/A",
+                    airborne: definition ? definition.statAirborne : "N/A",
+                    zoom: definition ? definition.statZoom : "N/A",
+                    rpm: definition ? definition.statRPM : "N/A",
+                    blastradius: definition ? definition.statBR : "N/A",
+                    velocity: definition ? definition.statVelocity : "N/A",
+                    power: definition ? definition.statPower : "N/A",
+                    guardResistance: definition ? definition.statGR : "N/A",
+                    ammoCapacity: definition ? definition.statAC : "N/A",
+                    inventorySize: definition ? definition.statIS : "N/A",
+                    guardEndurance: definition ? definition.statGE : "N/A",
+                    swingSpeed: definition ? definition.statSS : "N/A",
+                    chargeTime: definition ? definition.statCT : "N/A",
+                    chargeRate: definition ? definition.statCR : "N/A",
+                    shieldDuration: definition ? definition.statSD : "N/A",
+                    drawTime: definition ? definition.statDT : "N/A",
+                    accuracy: definition ? definition.statAccuracy : "N/A",
+                    mobility: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.mobility || 0,
+                    resilience: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.resilience || 0,
+                    recovery: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.recovery || 0,
+                    discipline: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.discipline || 0,
+                    intellect: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.intellect || 0,
+                    strength: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.strength || 0,
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
@@ -476,9 +669,33 @@ app.get('/api/titaninventory', async (req, res) => {
             }).then(definitionResponse => {
                 if (definitionResponse.data.Response) {
                     return {
-                        name: definitionResponse.data.Response.displayProperties.name,
                         hash: hash,
-                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash,
+                        itemTypeDisplayName: definitionResponse.data.Response.itemTypeDisplayName,
+                        statImpact: definitionResponse.data.Response.stats?.stats?.["4043523819"]?.value || "N/A",
+                        statRange: definitionResponse.data.Response.stats?.stats?.["1240592695"]?.value || "N/A",
+                        statStability: definitionResponse.data.Response.stats?.stats?.["155624089"]?.value || "N/A",
+                        statHandling: definitionResponse.data.Response.stats?.stats?.["943549884"]?.value || "N/A",
+                        statReloadSpeed: definitionResponse.data.Response.stats?.stats?.["4188031367"]?.value || "N/A",
+                        statAA: definitionResponse.data.Response.stats?.stats?.["1345609583"]?.value || "N/A",
+                        statAirborne: definitionResponse.data.Response.stats?.stats?.["2714457168"]?.value || "N/A",
+                        statZoom: definitionResponse.data.Response.stats?.stats?.["3555269338"]?.value || "N/A",
+                        statRPM: definitionResponse.data.Response.stats?.stats?.["4284893193"]?.value || "N/A",
+                        statBR: definitionResponse.data.Response.stats?.stats?.["3614673599"]?.value || "N/A",
+                        statVelocity: definitionResponse.data.Response.stats?.stats?.["2523465841"]?.value || "N/A",
+                        statPower: definitionResponse.data.Response.stats?.stats?.["1935470627"]?.value || "N/A",
+                        statGR: definitionResponse.data.Response.stats?.stats?.["209426660"]?.value || "N/A",
+                        statAC: definitionResponse.data.Response.stats?.stats?.["925767036"]?.value || "N/A",
+                        statIS: definitionResponse.data.Response.stats?.stats?.["1931675084"]?.value || "N/A",
+                        statGE: definitionResponse.data.Response.stats?.stats?.["2762071195"]?.value || "N/A",
+                        statSS: definitionResponse.data.Response.stats?.stats?.["2837207746"]?.value || "N/A",
+                        statCT: definitionResponse.data.Response.stats?.stats?.["2961396640"]?.value || "N/A",
+                        statCR: definitionResponse.data.Response.stats?.stats?.["3022301683"]?.value || "N/A",
+                        statSD: definitionResponse.data.Response.stats?.stats?.["1842278586"]?.value || "N/A",
+                        statDT: definitionResponse.data.Response.stats?.stats?.["447667954"]?.value || "N/A",
+                        statAccuracy: definitionResponse.data.Response.stats?.stats?.["1591432999"]?.value || "N/A",
                     };
                 }
             }).catch(err => {
@@ -510,6 +727,51 @@ app.get('/api/titaninventory', async (req, res) => {
         );
 
         const lightLevels = await Promise.all(lightLevelPromises);
+
+        const armorBucketHashes = [
+            3448274439, // Helmet
+            3551918588, // Gauntlets
+            14239492,   // Chest Armor
+            20886954,   // Leg Armor
+            1585787867  // Class Armor
+        ];
+
+        // Filter for armor items
+        const armorItems = inventoryItems.filter(item => {
+            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+            return definition && armorBucketHashes.includes(definition.bucketTypeHash);
+        });
+
+        // Fetch armor stats for each armor item
+        const armorStatsPromises = armorItems.map(item => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${item.itemInstanceId}/?components=304`, {
+            headers: { 
+                'X-API-KEY': API_KEY, 
+                Authorization: `Bearer ${req.session.accessToken}` 
+            }
+            }).then(statsResponse => {
+            const statsData = statsResponse.data.Response.stats?.data;
+            if (statsData) {
+                return {
+                itemInstanceId: item.itemInstanceId,
+                stats: {
+                    mobility: statsData.stats[2996146975]?.value || 0,     // Mobility
+                    resilience: statsData.stats[392767087]?.value || 0,    // Resilience
+                    recovery: statsData.stats[1943323491]?.value || 0,     // Recovery
+                    discipline: statsData.stats[1735777505]?.value || 0,   // Discipline
+                    intellect: statsData.stats[144602215]?.value || 0,     // Intellect
+                    strength: statsData.stats[4244567218]?.value || 0      // Strength
+                }
+                };
+            }
+            return null;
+            }).catch(err => {
+            console.error(`Error fetching stats for armor ${item.itemInstanceId}:`, err.message);
+            return null;
+            })
+        );
+
+        const armorStats = await Promise.all(armorStatsPromises);
 
         const damageTypePromises = lightLevels
             .filter(data => data?.damageType) // Ensure damageType exists
@@ -546,7 +808,35 @@ app.get('/api/titaninventory', async (req, res) => {
                     itemInstanceId: item.itemInstanceId,
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
-                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    impact: definition ? definition.statImpact : "N/A",
+                    range: definition ? definition.statRange : "N/A",
+                    stability: definition ? definition.statStability : "N/A",
+                    handling: definition ? definition.statHandling : "N/A",
+                    reloadspeed: definition ? definition.statReloadSpeed : "N/A",
+                    aimassistance: definition ? definition.statAA : "N/A",
+                    airborne: definition ? definition.statAirborne : "N/A",
+                    zoom: definition ? definition.statZoom : "N/A",
+                    rpm: definition ? definition.statRPM : "N/A",
+                    blastradius: definition ? definition.statBR : "N/A",
+                    velocity: definition ? definition.statVelocity : "N/A",
+                    power: definition ? definition.statPower : "N/A",
+                    guardResistance: definition ? definition.statGR : "N/A",
+                    ammoCapacity: definition ? definition.statAC : "N/A",
+                    inventorySize: definition ? definition.statIS : "N/A",
+                    guardEndurance: definition ? definition.statGE : "N/A",
+                    swingSpeed: definition ? definition.statSS : "N/A",
+                    chargeTime: definition ? definition.statCT : "N/A",
+                    chargeRate: definition ? definition.statCR : "N/A",
+                    shieldDuration: definition ? definition.statSD : "N/A",
+                    drawTime: definition ? definition.statDT : "N/A",
+                    accuracy: definition ? definition.statAccuracy : "N/A",
+                    mobility: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.mobility || 0,
+                    resilience: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.resilience || 0,
+                    recovery: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.recovery || 0,
+                    discipline: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.discipline || 0,
+                    intellect: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.intellect || 0,
+                    strength: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.strength || 0,
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
@@ -595,7 +885,30 @@ app.get('/api/vault', async (req, res) => {
                         hash: hash,
                         name: definitionResponse.data.Response.displayProperties.name,
                         icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
-                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash
+                        bucketTypeHash: definitionResponse.data.Response.inventory.bucketTypeHash,
+                        itemTypeDisplayName: definitionResponse.data.Response.itemTypeDisplayName,
+                        statImpact: definitionResponse.data.Response.stats?.stats?.["4043523819"]?.value || "N/A",
+                        statRange: definitionResponse.data.Response.stats?.stats?.["1240592695"]?.value || "N/A",
+                        statStability: definitionResponse.data.Response.stats?.stats?.["155624089"]?.value || "N/A",
+                        statHandling: definitionResponse.data.Response.stats?.stats?.["943549884"]?.value || "N/A",
+                        statReloadSpeed: definitionResponse.data.Response.stats?.stats?.["4188031367"]?.value || "N/A",
+                        statAA: definitionResponse.data.Response.stats?.stats?.["1345609583"]?.value || "N/A",
+                        statAirborne: definitionResponse.data.Response.stats?.stats?.["2714457168"]?.value || "N/A",
+                        statZoom: definitionResponse.data.Response.stats?.stats?.["3555269338"]?.value || "N/A",
+                        statRPM: definitionResponse.data.Response.stats?.stats?.["4284893193"]?.value || "N/A",
+                        statBR: definitionResponse.data.Response.stats?.stats?.["3614673599"]?.value || "N/A",
+                        statVelocity: definitionResponse.data.Response.stats?.stats?.["2523465841"]?.value || "N/A",
+                        statPower: definitionResponse.data.Response.stats?.stats?.["1935470627"]?.value || "N/A",
+                        statGR: definitionResponse.data.Response.stats?.stats?.["209426660"]?.value || "N/A",
+                        statAC: definitionResponse.data.Response.stats?.stats?.["925767036"]?.value || "N/A",
+                        statIS: definitionResponse.data.Response.stats?.stats?.["1931675084"]?.value || "N/A",
+                        statGE: definitionResponse.data.Response.stats?.stats?.["2762071195"]?.value || "N/A",
+                        statSS: definitionResponse.data.Response.stats?.stats?.["2837207746"]?.value || "N/A",
+                        statCT: definitionResponse.data.Response.stats?.stats?.["2961396640"]?.value || "N/A",
+                        statCR: definitionResponse.data.Response.stats?.stats?.["3022301683"]?.value || "N/A",
+                        statSD: definitionResponse.data.Response.stats?.stats?.["1842278586"]?.value || "N/A",
+                        statDT: definitionResponse.data.Response.stats?.stats?.["447667954"]?.value || "N/A",
+                        statAccuracy: definitionResponse.data.Response.stats?.stats?.["1591432999"]?.value || "N/A",
                     };
                 }
             }).catch(err => {
@@ -627,6 +940,51 @@ app.get('/api/vault', async (req, res) => {
         );
 
         const lightLevels = await Promise.all(lightLevelPromises);
+
+        const armorBucketHashes = [
+            3448274439, // Helmet
+            3551918588, // Gauntlets
+            14239492,   // Chest Armor
+            20886954,   // Leg Armor
+            1585787867  // Class Armor
+        ];
+
+        // Filter for armor items
+        const armorItems = filteredVaultItems.filter(item => {
+            const definition = itemDefinitions.find(def => def.hash === item.itemHash);
+            return definition && armorBucketHashes.includes(definition.bucketTypeHash);
+        });
+
+        // Fetch armor stats for each armor item
+        const armorStatsPromises = armorItems.map(item => 
+            axios.get(`https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Item/${item.itemInstanceId}/?components=304`, {
+            headers: { 
+                'X-API-KEY': API_KEY, 
+                Authorization: `Bearer ${req.session.accessToken}` 
+            }
+            }).then(statsResponse => {
+            const statsData = statsResponse.data.Response.stats?.data;
+            if (statsData) {
+                return {
+                itemInstanceId: item.itemInstanceId,
+                stats: {
+                    mobility: statsData.stats[2996146975]?.value || 0,     // Mobility
+                    resilience: statsData.stats[392767087]?.value || 0,    // Resilience
+                    recovery: statsData.stats[1943323491]?.value || 0,     // Recovery
+                    discipline: statsData.stats[1735777505]?.value || 0,   // Discipline
+                    intellect: statsData.stats[144602215]?.value || 0,     // Intellect
+                    strength: statsData.stats[4244567218]?.value || 0      // Strength
+                }
+                };
+            }
+            return null;
+            }).catch(err => {
+            console.error(`Error fetching stats for armor ${item.itemInstanceId}:`, err.message);
+            return null;
+            })
+        );
+
+        const armorStats = await Promise.all(armorStatsPromises);
 
         const damageTypePromises = lightLevels
             .filter(data => data?.damageType) // Ensure damageType exists
@@ -663,7 +1021,35 @@ app.get('/api/vault', async (req, res) => {
                     itemInstanceId: item.itemInstanceId,
                     bucketHash: definition ? definition.bucketTypeHash : null,
                     icon: definition ? definition.icon : null,
-                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null
+                    lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    impact: definition ? definition.statImpact : "N/A",
+                    range: definition ? definition.statRange : "N/A",
+                    stability: definition ? definition.statStability : "N/A",
+                    handling: definition ? definition.statHandling : "N/A",
+                    reloadspeed: definition ? definition.statReloadSpeed : "N/A",
+                    aimassistance: definition ? definition.statAA : "N/A",
+                    airborne: definition ? definition.statAirborne : "N/A",
+                    zoom: definition ? definition.statZoom : "N/A",
+                    rpm: definition ? definition.statRPM : "N/A",
+                    blastradius: definition ? definition.statBR : "N/A",
+                    velocity: definition ? definition.statVelocity : "N/A",
+                    power: definition ? definition.statPower : "N/A",
+                    guardResistance: definition ? definition.statGR : "N/A",
+                    ammoCapacity: definition ? definition.statAC : "N/A",
+                    inventorySize: definition ? definition.statIS : "N/A",
+                    guardEndurance: definition ? definition.statGE : "N/A",
+                    swingSpeed: definition ? definition.statSS : "N/A",
+                    chargeTime: definition ? definition.statCT : "N/A",
+                    chargeRate: definition ? definition.statCR : "N/A",
+                    shieldDuration: definition ? definition.statSD : "N/A",
+                    drawTime: definition ? definition.statDT : "N/A",
+                    accuracy: definition ? definition.statAccuracy : "N/A",
+                    mobility: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.mobility || 0,
+                    resilience: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.resilience || 0,
+                    recovery: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.recovery || 0,
+                    discipline: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.discipline || 0,
+                    intellect: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.intellect || 0,
+                    strength: armorStats.find(stats => stats?.itemInstanceId === item.itemInstanceId)?.stats.strength || 0,
                 };
             })
             .filter(item => item.icon && item.lightLevel !== null); // Remove items without icon or light level
