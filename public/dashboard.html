@@ -97,7 +97,7 @@
             align-items: center;
             justify-content: flex-end; /* Align the power at the bottom */
             border: 2px solid white; /* Add a white border around the item */
-            background-color: #7195af;
+            background-color: #afa671;
             padding: 4px; /* Add space around the content inside the item */
             gap: 4px; /* Space between the icon and the power */
             margin-bottom: 4px; /* Space between each item */
@@ -114,7 +114,7 @@
             align-items: center;
             justify-content: flex-end; /* Align the power at the bottom */
             border: 2px solid white; /* Add a white border around the item */
-            background-color: white;
+            background-color:#7195af;
             padding: 4px; /* Add space around the content inside the item */
             gap: 4px; /* Space between the icon and the power */
             margin-bottom: 4px; /* Space between each item */
@@ -181,6 +181,35 @@
             justify-content: center;
             transform: translateX(100px); /* Move items 50px to the right */
 
+        }
+
+        .box {
+            width: 220px;
+            height: 270px;
+            background-color: #444; /* Default background color */
+            border: 2px solid white; /* Optional border */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px; /* Optional margin */
+            border-radius: 5px; /* Optional rounded corners */
+            transform: translate(48px, -9px);
+            display: none;
+        }
+
+        .vault-box{
+            width: 880px;
+            height: calc(var(--vault-category-height, 640px));
+            background-color: #444; /* Default background color */
+            border: 2px solid white; /* Optional border */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px; /* Optional margin */
+            border-radius: 5px; /* Optional rounded corners */
+            transform: translate(-20px, -10px);
+            display:none;
+            
         }
 
         .vault-category-items {
@@ -295,10 +324,80 @@
             transform: translate(-7px, -2px)
             
         }
+
+        .item-popup {
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+
+        .highlight-drop-zone {
+            border: 2px dashed #00ff00; /* Green dashed border for highlighting */
+            background-color: rgba(0, 255, 0, 0.1); /* Light green background */
+        }
+        .item-popup {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+          }
+          
+          .popup-content {
+            background-color: #222;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            width: 70%;
+            max-width: 500px;
+            border-radius: 5px;
+            color: #fff;
+          }
+          
+          .close-popup {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+          }
+          
+          .popup-header {
+            display: flex;
+            align-items: center;
+          }
+          
+          .popup-header img {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+          }
         
     </style>
 </head>
 <body>
+    <header>
+        <div style="position: absolute; top: 10px; right: 10px;">
+            <button onclick="
+            clearFetchedData();
+            fetchData();"
+            style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer;" 
+            aria-keyshortcuts="R">
+            <img src="assets/reload.png" alt="Refresh Icon" style="width: 20px; height: 20px; filter: invert(1); transform: translateX(-2px)" title="Refresh">
+            </button>
+            <button onclick="clearSessionData();" 
+            style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer;" 
+            title="Clear Session Data">
+            <img src="assets/logout.png" alt="Logout Icon" style="width: 20px; height: 20px; filter: invert(1);">
+            </button>
+        </div>
+    </header>
     <h1 id="welcome-message">Loading...</h1>
     <div class="container">
         <div class="left-section">
@@ -314,41 +413,49 @@
                         <div class="hunter-category category" id="Kinetic Weapons">
                             <h3>Kinetic Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Energy Weapons">
                             <h3>Energy Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Power Weapons">
                             <h3>Power Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Helmet">
                             <h3>Helmet</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Gauntlets">
                             <h3>Gauntlets</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Chest Armor">
                             <h3>Chest Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Leg Armor">
                             <h3>Leg Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="hunter-category category" id="Class Armor">
                             <h3>Class Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                     </div>
@@ -365,41 +472,49 @@
                         <div class="warlock-category category" id="Kinetic Weapons">
                             <h3>Kinetic Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Energy Weapons">
                             <h3>Energy Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Power Weapons">
                             <h3>Power Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Helmet">
                             <h3>Helmet</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Gauntlets">
                             <h3>Gauntlets</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Chest Armor">
                             <h3>Chest Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Leg Armor">
                             <h3>Leg Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="warlock-category category" id="Class Armor">
                             <h3>Class Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                     </div>
@@ -416,41 +531,49 @@
                         <div class="titan-category category" id="Kinetic Weapons">
                             <h3>Kinetic Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Energy Weapons">
                             <h3>Energy Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Power Weapons">
                             <h3>Power Weapons</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Helmet">
                             <h3>Helmet</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Gauntlets">
                             <h3>Gauntlets</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Chest Armor">
                             <h3>Chest Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Leg Armor">
                             <h3>Leg Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                         <div class="titan-category category" id="Class Armor">
                             <h3>Class Armor</h3>
                             <div class="equipped-items"></div>
+                            <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
                         </div>
                     </div>
@@ -463,34 +586,46 @@
             <div style="margin-top:250px" id="vault-items" class="item-grid">
                 <div class="vault-category category" id="Kinetic Weapons" style="width: 100%;">
                     <h3>Kinetic Weapons</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
                 </div>
                 <div class="vault-category category" id="Energy Weapons"style="width: 100%;">
                     <h3>Energy Weapons</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
+                    
                 </div>
                 <div class="vault-category category" id="Power Weapons"style="width: 100%;">
                     <h3>Power Weapons</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
                 </div>
                 <div class="vault-category category" id="Helmet"style="width: 100%;">
                     <h3>Helmet</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
                 </div>
                 <div class="vault-category category" id="Gauntlets"style="width: 100%;">
                     <h3>Gauntlets</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
+                    
                 </div>
                 <div class="vault-category category" id="Chest Armor" style="width: 100%;">
                     <h3>Chest Armor</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
+                    
                 </div>
                 <div class="vault-category category" id="Leg Armor"style="width: 100%;">
                     <h3>Leg Armor</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
+                    
                 </div>
                 <div class="vault-category category" id="Class Armor"style="width: 100%;">
                     <h3>Class Armor</h3>
+                    <div class="vault-box" style="position:absolute"></div>
                     <div class="vault-category-items"></div>
                 </div>
             </div>
@@ -499,6 +634,89 @@
     </div>
 
     <script>
+//
+document.addEventListener("DOMContentLoaded", () => {
+    let draggedElement = null;
+    let originalParent = null;
+
+    document.addEventListener("dragstart", (event) => {
+        if (event.target.classList.contains("item-container")) {
+            draggedElement = event.target;
+            originalParent = draggedElement.parentElement;
+            event.dataTransfer.effectAllowed = "move";
+            setTimeout(() => draggedElement.classList.add("hidden"), 0);
+
+            // Highlight all valid drop zones
+            document.querySelectorAll(".box, .vault-box").forEach((box) => {
+                box.classList.add("highlight-drop-zone");
+                box.style.display = "flex"; // Ensure the box is visible
+            });
+        }
+    });
+
+    document.addEventListener("dragend", () => {
+        if (draggedElement) {
+            draggedElement.classList.remove("hidden");
+            draggedElement = null;
+            originalParent = null;
+
+            // Remove highlight from all drop zones
+            document.querySelectorAll(".box, .vault-box").forEach((box) => {
+                box.classList.remove("highlight-drop-zone");
+                box.style.display = "none"; // Reset box display to none
+            });
+        }
+    });
+
+    document.querySelectorAll(".category-items, .vault-category-items").forEach((zone) => {
+        zone.addEventListener("dragover", (event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+        });
+
+        zone.addEventListener("drop", (event) => {
+            event.preventDefault();
+            if (draggedElement) {
+                let targetZone = zone;
+
+                // Prevent dropping into the same location
+                if (originalParent === targetZone) {
+                    return;
+                }
+
+                // Check if the target zone is not the vault and already has 9 items
+                if (!targetZone.closest(".vault-category-items") && targetZone.children.length >= 9) {
+                    // Return the dragged element back to its original parent
+                    if (originalParent) {
+                        originalParent.appendChild(draggedElement);
+                    }
+                    return;
+                }
+
+                // Determine the section type based on the parent container
+                const sectionType = zone.closest(".column")?.id || "vault";
+
+                // Create a new container for the dragged element
+                const newDiv = document.createElement("div");
+                newDiv.classList.add(`${sectionType}-inventory-item`);
+                newDiv.draggable = false;
+
+                // Append the dragged element to the new container
+                newDiv.appendChild(draggedElement);
+
+                // Append the new container to the target zone
+                targetZone.appendChild(newDiv);
+
+                // Remove the old container from the original parent
+                if (originalParent && originalParent.parentElement) {
+                    originalParent.parentElement.removeChild(originalParent);
+                }
+            }
+        });
+    });
+});
+
+//
         var acc = document.getElementsByClassName("store-section");
         var i;
 
@@ -614,11 +832,11 @@
                 itemDiv.classList.add(`${characterType}-inventory-item`);
                 itemDiv.draggable = false;
                 itemDiv.innerHTML = `
-                <div class="item-container" draggable="true">
-                    <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
+                <div class="item-container" draggable="true" data-item-id="${item.itemHash || item.itemInstanceId}" data-item-info="${encodeURIComponent(JSON.stringify(item))}" onclick="showItemDetails(this)">
+                        <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
                     <div class="stat">
-                    ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
-                    <span class="item-power">${item.lightLevel}</span>
+                        ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
+                        <span class="item-power">${item.lightLevel}</span>
                     </div>
                 </div>
                 `;
@@ -675,11 +893,11 @@
                 itemDiv.classList.add("vault-inventory-item");
                 itemDiv.draggable = false;
                 itemDiv.innerHTML = `
-                <div class="item-container" draggable="true">
-                    <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
+                <div class="item-container" draggable="true" data-item-id="${item.itemHash || item.itemInstanceId}" data-item-info='${JSON.stringify(item)}' onclick="showItemDetails(this)">
+                        <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
                     <div class="stat">
-                    ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
-                    <span class="item-power">${item.lightLevel}</span>
+                        ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
+                        <span class="item-power">${item.lightLevel}</span>
                     </div>
                 </div>
                 `;
@@ -694,62 +912,237 @@
     
         async function fetchEquippedData(characterType) {
             try {
-            let response = await fetch(`/api/${characterType}equipment`, { credentials: 'include' });
-            let data = await response.json();
-            console.log(`${characterType} Equipped Data:`, data);
+                let response = await fetch(`/api/${characterType}equipment`, { credentials: 'include' });
+                let data = await response.json();
+                console.log(`${characterType} Equipped Data:`, data);
 
-            let containerId = `${characterType}-inventory-items`;  // Corrected container ID
-            let equippedContainer = document.getElementById(containerId);
+                let containerId = `${characterType}-inventory-items`;  // Corrected container ID
+                let equippedContainer = document.getElementById(containerId);
 
-            // Define bucket categories
-            const bucketCategories = {
-                1498876634: "Kinetic Weapons",
-                2465295065: "Energy Weapons",
-                953998645: "Power Weapons",
-                3448274439: "Helmet",
-                3551918588: "Gauntlets",
-                14239492: "Chest Armor",
-                20886954: "Leg Armor",
-                1585787867: "Class Armor"
-            };
+                // Define bucket categories
+                const bucketCategories = {
+                    1498876634: "Kinetic Weapons",
+                    2465295065: "Energy Weapons",
+                    953998645: "Power Weapons",
+                    3448274439: "Helmet",
+                    3551918588: "Gauntlets",
+                    14239492: "Chest Armor",
+                    20886954: "Leg Armor",
+                    1585787867: "Class Armor"
+                };
 
-            data.equipment.forEach(item => {
-                let categoryName = bucketCategories[item.bucketHash];
-                if (!categoryName) {
-                console.warn(`Unrecognized bucketHash: ${item.bucketHash}`);
-                return; // Skip items with unrecognized bucketHash
-                }
-                let categoryDiv = equippedContainer.querySelector(`.category[id="${categoryName}"] .equipped-items`);
+                data.equipment.forEach(item => {
+                    let categoryName = bucketCategories[item.bucketHash];
+                    if (!categoryName) {
+                        console.warn(`Unrecognized bucketHash: ${item.bucketHash}`);
+                        return; // Skip items with unrecognized bucketHash
+                    }
+                    let categoryDiv = equippedContainer.querySelector(`.category[id="${categoryName}"] .equipped-items`);
 
-                if (categoryDiv) {
-                let itemDiv = document.createElement("div");
-                itemDiv.classList.add(`${characterType}-equipped-item`);
-                itemDiv.draggable = false;
-                itemDiv.innerHTML = `
-                <div class="item-container-equipped" draggable="true">
-                    <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
-                    <div class="stat">
-                    ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
-                    <span class="item-power">${item.lightLevel}</span>
-                    </div>
-                </div>
-                `;
-                categoryDiv.appendChild(itemDiv); // Append to the correct section
-                }
-            });
+                    if (categoryDiv) {
+                        let itemDiv = document.createElement("div");
+                        itemDiv.classList.add(`${characterType}-equipped-item`);
+                        itemDiv.draggable = false;
+                        itemDiv.innerHTML = `
+                        <div class="item-container-equipped" draggable="true" data-item-id="${item.itemHash || item.itemInstanceId}" data-item-info='${JSON.stringify(item)}' onclick="showItemDetails(this)">
+                            <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
+                            <div class="stat">
+                            ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
+                            <span class="item-power">${item.lightLevel}</span>
+                            </div>
+                        </div>
+                        `;
+                        categoryDiv.appendChild(itemDiv); // Append to the correct section
+                    }
+                });
             } catch (error) {
-            console.error(`Failed to fetch ${characterType} equipped data`, error);
+                console.error(`Failed to fetch ${characterType} equipped data`, error);
             }
         }
+
+        function showItemDetails(itemElement) {
+            try {
+            // Get the item data from the data-item-info attribute
+            const itemInfoStr = decodeURIComponent(itemElement.getAttribute('data-item-info'));
+            if (!itemInfoStr) {
+            console.error('No item info found');
+            return;
+            }
+            
+            // Parse the JSON string to get the item object
+            const item = JSON.parse(itemInfoStr);
+            
+            // Get the item name and icon
+            const name = item.name || 'Unknown Item';
+            const iconSrc = item.icon || '';
+            
+            // Build description including item type and stats if available
+            let description = '';
+            
+            // Add item type if available
+            if (item.itemTypeDisplayName) {
+            description += `<strong>Type:</strong> ${item.itemTypeDisplayName}<br><br>`;
+            }
+            
+            // Add stats section header
+            description += '<strong>Stats:</strong><br>';
+            
+            // Check if stats might be in a stats object
+            const stats = item.stats || item;
+            
+            // Add stats if they exist and are not N/A or 0
+            const statsAdded = [];
+            if (stats.impact && stats.impact !== 'N/A' && stats.impact !== 0) { description += `Impact: ${stats.impact}<br>`; statsAdded.push(true); }
+            if (stats.range && stats.range !== 'N/A' && stats.range !== 0) { description += `Range: ${stats.range}<br>`; statsAdded.push(true); }
+            if (stats.stability && stats.stability !== 'N/A' && stats.stability !== 0) { description += `Stability: ${stats.stability}<br>`; statsAdded.push(true); }
+            if (stats.handling && stats.handling !== 'N/A' && stats.handling !== 0) { description += `Handling: ${stats.handling}<br>`; statsAdded.push(true); }
+            if (stats.reloadspeed && stats.reloadspeed !== 'N/A' && stats.reloadspeed !== 0) { description += `Reload Speed: ${stats.reloadspeed}<br>`; statsAdded.push(true); }
+            if (stats.aimassistance && stats.aimassistance !== 'N/A' && stats.aimassistance !== 0) { description += `Aim Assistance: ${stats.aimassistance}<br>`; statsAdded.push(true); }
+            if (stats.airborne && stats.airborne !== 'N/A' && stats.airborne !== 0) { description += `Airborne: ${stats.airborne}<br>`; statsAdded.push(true); }
+            if (stats.zoom && stats.zoom !== 'N/A' && stats.zoom !== 0) { description += `Zoom: ${stats.zoom}<br>`; statsAdded.push(true); }
+            if (stats.rpm && stats.rpm !== 'N/A' && stats.rpm !== 0) { description += `RPM: ${stats.rpm}<br>`; statsAdded.push(true); }
+            if (stats.blastradius && stats.blastradius !== 'N/A' && stats.blastradius !== 0) { description += `Blast Radius: ${stats.blastradius}<br>`; statsAdded.push(true); }
+            if (stats.velocity && stats.velocity !== 'N/A' && stats.velocity !== 0) { description += `Velocity: ${stats.velocity}<br>`; statsAdded.push(true); }
+            if (stats.power && stats.power !== 'N/A' && stats.power !== 0) { description += `Power: ${stats.power}<br>`; statsAdded.push(true); }
+            if (stats.guardResistance && stats.guardResistance !== 'N/A' && stats.guardResistance !== 0) { description += `Guard Resistance: ${stats.guardResistance}<br>`; statsAdded.push(true); }
+            if (stats.swingSpeed && stats.swingSpeed !== 'N/A' && stats.swingSpeed !== 0) { description += `Swing Speed: ${stats.swingSpeed}<br>`; statsAdded.push(true); }
+            if (stats.chargeTime && stats.chargeTime !== 'N/A' && stats.chargeTime !== 0) { description += `Charge Time: ${stats.chargeTime}<br>`; statsAdded.push(true); }
+            if (stats.drawTime && stats.drawTime !== 'N/A' && stats.drawTime !== 0) { description += `Draw Time: ${stats.drawTime}<br>`; statsAdded.push(true); }
+            if (stats.chargeRate && stats.chargeRate !== 'N/A' && stats.chargeRate !== 0) { description += `Charge Rate: ${stats.chargeRate}<br>`; statsAdded.push(true); }
+            if (stats.shieldDuration && stats.shieldDuration !== 'N/A' && stats.shieldDuration !== 0) { description += `Shield Duration: ${stats.shieldDuration}<br>`; statsAdded.push(true); }
+            if (stats.accuracy && stats.accuracy !== 'N/A' && stats.accuracy !== 0) { description += `Accuracy: ${stats.accuracy}<br>`; statsAdded.push(true); }
+            if (stats.mobility && stats.mobility !== 'N/A' && stats.mobility !== 0) { description += `Mobility: ${stats.mobility}<br>`; statsAdded.push(true); }
+            if (stats.resilience && stats.resilience !== 'N/A' && stats.resilience !== 0) { description += `Resilience: ${stats.resilience}<br>`; statsAdded.push(true); }
+            if (stats.recovery && stats.recovery !== 'N/A' && stats.recovery !== 0) { description += `Recovery: ${stats.recovery}<br>`; statsAdded.push(true); }
+            if (stats.discipline && stats.discipline !== 'N/A' && stats.discipline !== 0) { description += `Discipline: ${stats.discipline}<br>`; statsAdded.push(true); }
+            if (stats.intellect && stats.intellect !== 'N/A' && stats.intellect !== 0) { description += `Intellect: ${stats.intellect}<br>`; statsAdded.push(true); }
+            if (stats.strength && stats.strength !== 'N/A' && stats.strength !== 0) { description += `Strength: ${stats.strength}<br>`; statsAdded.push(true); }
+            
+            // If no stats were added, update description
+            if (statsAdded.length === 0) {
+            description += 'No stats available';
+            }
+            
+            // Show the popup with the item details
+            showItemPopup(name, description, iconSrc);
+            } catch (error) {
+            console.error('Error displaying item details:', error);
+            }
+        }
+
+        function clearFetchedData() {
+            // Clear character data
+            ["hunter", "warlock", "titan"].forEach(characterType => {
+            document.getElementById(`${characterType}-emblem`).src = "";
+            document.getElementById(`${characterType}-power`).textContent = "Power: --";
+            document.getElementById(`${characterType}-stats`).innerHTML = "";
+            let inventoryContainer = document.getElementById(`${characterType}-inventory-items`);
+            if (inventoryContainer) {
+                inventoryContainer.querySelectorAll(".category .category-items").forEach(category => {
+                category.innerHTML = "";
+                });
+                inventoryContainer.querySelectorAll(".category .equipped-items").forEach(category => {
+                category.innerHTML = "";
+                });
+            }
+            });
+
+            // Clear vault data
+            let vaultContainer = document.getElementById("vault-items");
+            if (vaultContainer) {
+            vaultContainer.querySelectorAll(".vault-category .vault-category-items").forEach(category => {
+                category.innerHTML = "";
+            });
+            }
+        }
+
+        async function clearSessionData() {
+            try {
+            // Call the /auth/logout endpoint
+            let response = await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+            if (response.ok) {
+                console.log("Logout successful");
+            } else {
+                console.error("Logout failed", response.statusText);
+            }
+            } catch (error) {
+            console.error("Error during logout", error);
+            }
+
+            // Clear all cookies
+            document.cookie.split(";").forEach(cookie => {
+            const name = cookie.split("=")[0].trim();
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+            });
+
+            // Clear access token from localStorage or sessionStorage
+            localStorage.removeItem('accessToken');
+            sessionStorage.removeItem('accessToken');
+
+            // Redirect to index.html
+            window.location.href = "index.html";
+        }
+
+        function showItemPopup(name, description, iconSrc) {
+            // Get popup elements
+            const popup = document.getElementById('item-popup');
+            const popupName = document.getElementById('popup-name');
+            const popupDescription = document.getElementById('popup-description');
+            const popupIcon = document.getElementById('popup-icon');
+            const closeButton = document.querySelector('.close-popup');
+            
+            // Set content
+            popupName.textContent = name;
+            popupDescription.innerHTML = description;
+            popupIcon.src = iconSrc;
+            
+            // Show popup
+            popup.style.display = 'block';
+            
+            // Close on clicking X
+            closeButton.onclick = function() {
+              popup.style.display = 'none';
+            }
+            
+            // Close on clicking outside
+            window.onclick = function(event) {
+              if (event.target === popup) {
+                popup.style.display = 'none';
+              }
+            }
+          }
         
-        fetchInventoryData('hunter');
-        fetchInventoryData('warlock');
-        fetchInventoryData('titan');
-        fetchEquippedData('hunter');
-        fetchEquippedData('warlock');
-        fetchEquippedData('titan');
-        fetchVaultData();
-        fetchCharacterData();
+        async function fetchData() {
+            fetchCharacterData();
+            setTimeout(() => {
+                Promise.all([
+                    fetchInventoryData('hunter'),
+                    fetchInventoryData('warlock'),
+                    fetchInventoryData('titan'),
+                    fetchEquippedData('hunter'),
+                    fetchEquippedData('warlock'),
+                    fetchEquippedData('titan'),
+                    fetchVaultData()
+                ]).then(() => console.log("All data fetched simultaneously"));
+            }, 2000);
+        }
+
+        fetchData();
+        
     </script>
+
+    <div id="item-popup" class="item-popup">
+        <div class="popup-content">
+          <span class="close-popup">&times;</span>
+          <div class="popup-header">
+            <img id="popup-icon" src="" alt="Item">
+            <h2 id="popup-name"></h2>
+          </div>
+          <div class="popup-body">
+            <p id="popup-description"></p>
+          </div>
+        </div>
+      </div>
+
 </body>
 </html>
