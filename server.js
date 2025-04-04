@@ -10,6 +10,8 @@ const { AuthorizationCode } = require('simple-oauth2');
 const app = express();
 const PORT = 3000;
 
+app.use(express.json());
+
 // Serve static files from the public directory
 app.use(express.static('public'));
 
@@ -263,6 +265,7 @@ app.get('/api/hunterinventory', async (req, res) => {
                 if (itemData?.instance?.data?.primaryStat) {
                     return {
                         itemInstanceId: instanceId,
+                        characterId: itemData.characterId,
                         bucketHash: itemData.item.data.bucketHash,
                         lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
                         damageType: itemData.instance.data.damageTypeHash
@@ -352,7 +355,8 @@ app.get('/api/hunterinventory', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    characterId: lightLevelData ? lightLevelData.characterId : null,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
                     itemInstanceId: item.itemInstanceId,
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
@@ -490,6 +494,7 @@ app.get('/api/warlockinventory', async (req, res) => {
                     return {
                         itemInstanceId: instanceId,
                         bucketHash: itemData.item.data.bucketHash,
+                        characterId: itemData.characterId,
                         lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
                         damageType: itemData.instance.data.damageTypeHash
                     };
@@ -578,9 +583,10 @@ app.get('/api/warlockinventory', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
                     itemInstanceId: item.itemInstanceId,
+                    characterId: lightLevelData ? lightLevelData.characterId : null,
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
@@ -715,6 +721,7 @@ app.get('/api/titaninventory', async (req, res) => {
                     return {
                         itemInstanceId: instanceId,
                         bucketHash: itemData.item.data.bucketHash,
+                        characterId: itemData.characterId,
                         lightLevel: itemData.instance.data.primaryStat.value,
                         damageType: itemData.instance.data.damageTypeHash
                     };
@@ -803,9 +810,10 @@ app.get('/api/titaninventory', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
                     itemInstanceId: item.itemInstanceId,
+                    characterId: lightLevelData ? lightLevelData.characterId : null,
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
@@ -1016,8 +1024,9 @@ app.get('/api/vault', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
+                    characterId: "Vault",
                     itemInstanceId: item.itemInstanceId,
                     bucketHash: definition ? definition.bucketTypeHash : null,
                     icon: definition ? definition.icon : null,
@@ -1197,6 +1206,7 @@ app.get('/api/hunterequipment', async (req, res) => {
                     return {
                         itemInstanceId: instanceId,
                         bucketHash: itemData.item.data.bucketHash,
+                        characterId: itemData.characterId,
                         lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
                         damageType: itemData.instance.data.damageTypeHash
                     };
@@ -1287,8 +1297,9 @@ app.get('/api/hunterequipment', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
+                    characterId: lightLevelData ? lightLevelData.characterId : null,
                     itemInstanceId: item.itemInstanceId,
                     itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     bucketHash: definition ? definition.bucketTypeHash : null,
@@ -1430,6 +1441,7 @@ app.get('/api/warlockequipment', async (req, res) => {
                     return {
                         itemInstanceId: instanceId,
                         bucketHash: itemData.item.data.bucketHash,
+                        characterId: itemData.characterId,
                         lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
                         damageType: itemData.instance.data.damageTypeHash
                     };
@@ -1520,9 +1532,10 @@ app.get('/api/warlockequipment', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
                     itemInstanceId: item.itemInstanceId,
+                    characterId: lightLevelData ? lightLevelData.characterId : null,
                     itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     bucketHash: definition ? definition.bucketTypeHash : null,
                     icon: definition ? definition.icon : null,
@@ -1664,6 +1677,7 @@ app.get('/api/titanequipment', async (req, res) => {
                         itemInstanceId: instanceId,
                         bucketHash: itemData.item.data.bucketHash,
                         lightLevel: itemData.instance.data.primaryStat.value, // Get the light level
+                        characterId: itemData.characterId,
                         damageType: itemData.instance.data.damageTypeHash
                     };
                 }
@@ -1753,9 +1767,10 @@ app.get('/api/titanequipment', async (req, res) => {
                     name: definition ? definition.name : null,
                     dName: damageTypeData ? damageTypeData.damageTypeName : null,
                     dIcon: damageTypeData ? damageTypeData.damageTypeIcon : null,
-                    itemHash: item.itemHash,
+                    itemReferenceHash: item.itemHash,
                     quantity: item.quantity,
                     itemInstanceId: item.itemInstanceId,
+                    characterId: lightLevelData ? lightLevelData.characterId : null,
                     itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     bucketHash: definition ? definition.bucketTypeHash : null,
                     icon: definition ? definition.icon : null,
@@ -1806,7 +1821,44 @@ app.get('/api/titanequipment', async (req, res) => {
     }
 });
 
+app.post('/api/transferitem', async (req, res) => {
+    try {
+        const { membershipType } = req.session;
+        const { itemReferenceHash, stackSize, transferToVault, itemId, characterId } = req.body;
 
+        if (!membershipType || !itemReferenceHash || !stackSize || !itemId || !characterId) {
+            return res.status(400).json({ error: "Missing required parameters" });
+        }
+
+        const transferUrl = `https://www.bungie.net/Platform/Destiny2/Actions/Items/TransferItem/`;
+
+        const payload = {
+            itemReferenceHash,
+            stackSize,
+            transferToVault,
+            itemId,
+            characterId,
+            membershipType
+        };
+
+        const response = await axios.post(transferUrl, payload, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.data.ErrorCode !== 1) {
+            return res.status(500).json({ error: "Failed to transfer item", details: response.data });
+        }
+
+        res.json({ message: "Item transferred successfully", data: response.data });
+    } catch (error) {
+        console.error("Error transferring item:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to transfer item" });
+    }
+});
 
 // Load SSL certificates
 const options = {

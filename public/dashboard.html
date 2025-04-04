@@ -634,108 +634,6 @@
     </div>
 
     <script>
-//
-document.addEventListener("DOMContentLoaded", () => {
-    let draggedElement = null;
-    let originalParent = null;
-
-    document.addEventListener("dragstart", (event) => {
-        if (event.target.classList.contains("item-container")) {
-            draggedElement = event.target;
-            originalParent = draggedElement.parentElement;
-            event.dataTransfer.effectAllowed = "move";
-            setTimeout(() => draggedElement.classList.add("hidden"), 0);
-
-            // Highlight all valid drop zones
-            document.querySelectorAll(".box, .vault-box").forEach((box) => {
-                box.classList.add("highlight-drop-zone");
-                box.style.display = "flex"; // Ensure the box is visible
-            });
-        }
-    });
-
-    document.addEventListener("dragend", () => {
-        if (draggedElement) {
-            draggedElement.classList.remove("hidden");
-            draggedElement = null;
-            originalParent = null;
-
-            // Remove highlight from all drop zones
-            document.querySelectorAll(".box, .vault-box").forEach((box) => {
-                box.classList.remove("highlight-drop-zone");
-                box.style.display = "none"; // Reset box display to none
-            });
-        }
-    });
-
-    document.querySelectorAll(".category-items, .vault-category-items").forEach((zone) => {
-        zone.addEventListener("dragover", (event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-        });
-
-        zone.addEventListener("drop", (event) => {
-            event.preventDefault();
-            if (draggedElement) {
-                let targetZone = zone;
-
-                // Prevent dropping into the same location
-                if (originalParent === targetZone) {
-                    return;
-                }
-
-                // Check if the target zone is not the vault and already has 9 items
-                if (!targetZone.closest(".vault-category-items") && targetZone.children.length >= 9) {
-                    // Return the dragged element back to its original parent
-                    if (originalParent) {
-                        originalParent.appendChild(draggedElement);
-                    }
-                    return;
-                }
-
-                // Determine the section type based on the parent container
-                const sectionType = zone.closest(".column")?.id || "vault";
-
-                // Create a new container for the dragged element
-                const newDiv = document.createElement("div");
-                newDiv.classList.add(`${sectionType}-inventory-item`);
-                newDiv.draggable = false;
-
-                // Append the dragged element to the new container
-                newDiv.appendChild(draggedElement);
-
-                // Append the new container to the target zone
-                targetZone.appendChild(newDiv);
-
-                // Remove the old container from the original parent
-                if (originalParent && originalParent.parentElement) {
-                    originalParent.parentElement.removeChild(originalParent);
-                }
-            }
-        });
-    });
-});
-
-//
-        var acc = document.getElementsByClassName("store-section");
-        var i;
-
-        for (i = 0; i < acc.length; i++) {
-        acc[i].addEventListener("click", function() {
-            /* Toggle between adding and removing the "active" class,
-            to highlight the button that controls the panel */
-            this.classList.toggle("active");
-
-            /* Toggle between hiding and showing the active panel */
-            var panel = this.nextElementSibling;
-            if (panel.style.display === "block") {
-            panel.style.display = "none";
-            } else {
-            panel.style.display = "block";
-            }
-        });
-        }
-        
         const params = new URLSearchParams(window.location.search);
         const userName = params.get("user") || "Guardian";
         document.getElementById("welcome-message").textContent = `Welcome, ${userName}!`;
@@ -832,7 +730,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 itemDiv.classList.add(`${characterType}-inventory-item`);
                 itemDiv.draggable = false;
                 itemDiv.innerHTML = `
-                <div class="item-container" draggable="true" data-item-id="${item.itemHash || item.itemInstanceId}" data-item-info="${encodeURIComponent(JSON.stringify(item))}" onclick="showItemDetails(this)">
+                <div class="item-container" draggable="true" data-item-id="${item.itemReferenceHash}-${item.itemInstanceId}-${item.characterId}" data-item-info="${encodeURIComponent(JSON.stringify(item))}" onclick="showItemDetails(this)">
                         <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
                     <div class="stat">
                         ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
@@ -893,7 +791,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 itemDiv.classList.add("vault-inventory-item");
                 itemDiv.draggable = false;
                 itemDiv.innerHTML = `
-                <div class="item-container" draggable="true" data-item-id="${item.itemHash || item.itemInstanceId}" data-item-info='${JSON.stringify(item)}' onclick="showItemDetails(this)">
+                <div class="item-container" draggable="true" data-item-id="${item.itemReferenceHash}-${item.itemInstanceId}-${item.characterId}" data-item-info="${encodeURIComponent(JSON.stringify(item))}" onclick="showItemDetails(this)">
                         <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
                     <div class="stat">
                         ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
@@ -944,7 +842,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         itemDiv.classList.add(`${characterType}-equipped-item`);
                         itemDiv.draggable = false;
                         itemDiv.innerHTML = `
-                        <div class="item-container-equipped" draggable="true" data-item-id="${item.itemHash || item.itemInstanceId}" data-item-info='${JSON.stringify(item)}' onclick="showItemDetails(this)">
+                        <div class="item-container-equipped" draggable="true" data-item-id="${item.itemReferenceHash}-${item.itemInstanceId}-${item.characterId}" data-item-info="${encodeURIComponent(JSON.stringify(item))}" onclick="showItemDetails(this)">
                             <img src="${item.icon}" class="item-icon" title="${item.name}" alt="Item" draggable="false">
                             <div class="stat">
                             ${item.dIcon && item.dName ? `<img src="${item.dIcon}" title="${item.dName}" alt="Type" draggable="false">` : ''}
@@ -983,6 +881,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (item.itemTypeDisplayName) {
             description += `<strong>Type:</strong> ${item.itemTypeDisplayName}<br><br>`;
             }
+
+            description += `<strong>Id:</strong> Hash:${item.itemReferenceHash}, Instance Id:${item.itemInstanceId}, CharId:${item.characterId}<br><br>`;
             
             // Add stats section header
             description += '<strong>Stats:</strong><br>';
@@ -1111,6 +1011,214 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }
           }
+
+        async function transferItem(itemReferenceHash, stackSize, transferToVault, itemInstanceId, characterId) {
+            try {
+                const payload = {
+                    itemReferenceHash: itemReferenceHash,
+                    stackSize: parseInt(stackSize),
+                    transferToVault: transferToVault,
+                    itemId: itemInstanceId,
+                    characterId: characterId
+                };
+                
+                console.log('Sending transfer request with payload:', payload);
+                
+                const response = await fetch('/api/transferitem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Transfer error:', data.error);
+                    return false;
+                }
+                
+                console.log('Transfer successful:', data.message);
+                return true;
+            } catch (error) {
+                console.error('Transfer failed:', error);
+                return false;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            let draggedElement = null;
+            let originalParent = null;
+
+            document.addEventListener("dragstart", (event) => {
+                if (event.target.classList.contains("item-container") || event.target.classList.contains("item-container-equipped")) {
+                    draggedElement = event.target;
+                    originalParent = draggedElement.parentElement;
+                    event.dataTransfer.effectAllowed = "move";
+                    setTimeout(() => draggedElement.classList.add("hidden"), 0);
+            
+                    // Highlight all valid drop zones
+                    document.querySelectorAll(".box, .vault-box").forEach((box) => {
+                        box.classList.add("highlight-drop-zone");
+                        box.style.display = "flex"; // Ensure the box is visible
+                    });
+                }
+            });
+            
+            document.addEventListener("dragend", () => {
+                if (draggedElement) {
+                    draggedElement.classList.remove("hidden");
+            
+                    // Remove highlight from all drop zones
+                    document.querySelectorAll(".box, .vault-box").forEach((box) => {
+                        box.classList.remove("highlight-drop-zone");
+                        box.style.display = "none"; // Reset box display to none
+                    });
+            
+                    // Reset draggedElement and originalParent after a short delay to ensure the drop event completes
+                    setTimeout(() => {
+                        draggedElement = null;
+                        originalParent = null;
+                    }, 100);
+                }
+            });
+
+            document.querySelectorAll(".category-items, .vault-category-items").forEach((zone) => {
+                zone.addEventListener("dragover", (event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                });
+
+                zone.addEventListener("drop", async (event) => {
+                    event.preventDefault();
+                    if (!draggedElement) {
+                        console.error("No dragged element found during drop.");
+                        return;
+                    }
+                
+                    let targetZone = zone;
+                
+                    // Prevent dropping into the same location
+                    if (originalParent === targetZone) {
+                        return;
+                    }
+                
+                    // Check if the target zone is not the vault and already has 9 items
+                    if (!targetZone.closest(".vault-category-items") && targetZone.children.length >= 9) {
+                        // Return the dragged element back to its original parent
+                        if (originalParent) {
+                            originalParent.appendChild(draggedElement);
+                        }
+                        return;
+                    }
+                
+                    try {
+                        // Get item data from dragged element
+                        let itemInfoStr = draggedElement.getAttribute('data-item-info');
+                        if (!itemInfoStr) {
+                            console.error("Dragged element does not have item info.");
+                            return;
+                        }
+                
+                        let itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                
+                        if (!itemData || !itemData.itemReferenceHash || !itemData.itemInstanceId) {
+                            console.error("Invalid item data:", itemData);
+                            return;
+                        }
+                
+                        // Determine if transferring to vault
+                        const targetIsVault = targetZone.closest(".vault-category-items") !== null;
+                        const sourceIsVault = originalParent.closest(".vault-category-items") !== null;
+                
+                        // If target is not vault, determine destination character ID
+                        let destinationCharacterId = null;
+                        if (!targetIsVault) {
+                            const destinationClass = targetZone.closest(".column")?.id; // hunter, warlock, or titan
+                            if (destinationClass) {
+                                const response = await fetch('/api/characters');
+                                const characterData = await response.json();
+                
+                                if (characterData && characterData.characterData) {
+                                    destinationCharacterId = characterData.characterData[destinationClass]?.characterId;
+                                    if (!destinationCharacterId) {
+                                        console.error(`Character ID for ${destinationClass} is invalid`);
+                                        return;
+                                    }
+                                } else {
+                                    console.error("Character data not available");
+                                    return;
+                                }
+                            }
+                        }
+                
+                        let transferResult;
+                
+                        if (sourceIsVault && !targetIsVault) {
+                            // From vault to character
+                            transferResult = await transferItem(
+                                itemData.itemReferenceHash,
+                                1, // stack size
+                                false, // transferToVault is false when going from vault to character
+                                itemData.itemInstanceId,
+                                destinationCharacterId
+                            );
+                        } else if (!sourceIsVault && targetIsVault) {
+                            // From character to vault
+                            transferResult = await transferItem(
+                                itemData.itemReferenceHash,
+                                1, // stack size
+                                true, // transferToVault is true when going to vault
+                                itemData.itemInstanceId,
+                                itemData.characterId
+                            );
+                        } else if (!sourceIsVault && !targetIsVault) {
+                            // From character to character (via vault)
+                            transferResult = await transferItem(
+                                itemData.itemReferenceHash,
+                                1,
+                                true,
+                                itemData.itemInstanceId,
+                                itemData.characterId
+                            );
+                
+                            if (transferResult) {
+                                transferResult = await transferItem(
+                                    itemData.itemReferenceHash,
+                                    1,
+                                    false,
+                                    itemData.itemInstanceId,
+                                    destinationCharacterId
+                                );
+                            }
+                        }
+                
+                        if (transferResult) {
+                            // Clone the dragged element before appending
+                            const clonedElement = draggedElement.cloneNode(true);
+                            targetZone.appendChild(clonedElement);
+                
+                            // Remove the original element from its parent
+                            if (originalParent && originalParent.contains(draggedElement)) {
+                                originalParent.removeChild(draggedElement);
+                            }
+                        } else {
+                            console.error("Transfer failed, returning item to original location");
+                            if (originalParent) {
+                                originalParent.appendChild(draggedElement);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error during item transfer:", error);
+                        if (originalParent) {
+                            originalParent.appendChild(draggedElement);
+                        }
+                    }
+                });
+            });
+        });
         
         async function fetchData() {
             fetchCharacterData();
