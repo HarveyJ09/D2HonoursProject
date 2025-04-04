@@ -1053,6 +1053,7 @@
             let originalParent = null;
 
             document.addEventListener("dragstart", (event) => {
+                // Handle both types of item containers
                 if (event.target.classList.contains("item-container") || event.target.classList.contains("item-container-equipped")) {
                     draggedElement = event.target;
                     originalParent = draggedElement.parentElement;
@@ -1076,12 +1077,10 @@
                         box.classList.remove("highlight-drop-zone");
                         box.style.display = "none"; // Reset box display to none
                     });
-            
-                    // Reset draggedElement and originalParent after a short delay to ensure the drop event completes
-                    setTimeout(() => {
-                        draggedElement = null;
-                        originalParent = null;
-                    }, 100);
+                    
+                    // Reset drag variables
+                    draggedElement = null;
+                    originalParent = null;
                 }
             });
 
@@ -1091,133 +1090,120 @@
                     event.dataTransfer.dropEffect = "move";
                 });
 
-                zone.addEventListener("drop", async (event) => {
+                zone.addEventListener("drop", (event) => {
                     event.preventDefault();
-                    if (!draggedElement) {
-                        console.error("No dragged element found during drop.");
-                        return;
-                    }
-                
+                    if (!draggedElement) return;
+                    
                     let targetZone = zone;
-                
+
                     // Prevent dropping into the same location
                     if (originalParent === targetZone) {
                         return;
                     }
-                
+
                     // Check if the target zone is not the vault and already has 9 items
                     if (!targetZone.closest(".vault-category-items") && targetZone.children.length >= 9) {
-                        // Return the dragged element back to its original parent
-                        if (originalParent) {
-                            originalParent.appendChild(draggedElement);
-                        }
                         return;
                     }
-                
-                    try {
-                        // Get item data from dragged element
-                        let itemInfoStr = draggedElement.getAttribute('data-item-info');
-                        if (!itemInfoStr) {
-                            console.error("Dragged element does not have item info.");
-                            return;
-                        }
-                
-                        let itemData = JSON.parse(decodeURIComponent(itemInfoStr));
-                
-                        if (!itemData || !itemData.itemReferenceHash || !itemData.itemInstanceId) {
-                            console.error("Invalid item data:", itemData);
-                            return;
-                        }
-                
-                        // Determine if transferring to vault
-                        const targetIsVault = targetZone.closest(".vault-category-items") !== null;
-                        const sourceIsVault = originalParent.closest(".vault-category-items") !== null;
-                
-                        // If target is not vault, determine destination character ID
-                        let destinationCharacterId = null;
-                        if (!targetIsVault) {
-                            const destinationClass = targetZone.closest(".column")?.id; // hunter, warlock, or titan
-                            if (destinationClass) {
-                                const response = await fetch('/api/characters');
-                                const characterData = await response.json();
-                
-                                if (characterData && characterData.characterData) {
-                                    destinationCharacterId = characterData.characterData[destinationClass]?.characterId;
-                                    if (!destinationCharacterId) {
-                                        console.error(`Character ID for ${destinationClass} is invalid`);
-                                        return;
-                                    }
-                                } else {
-                                    console.error("Character data not available");
-                                    return;
-                                }
+
+                    // Determine the section type based on the parent container
+                    const sectionType = targetZone.closest(".column")?.id || "vault";
+                    
+                    // Get item data for API transfer
+                    let itemInfoStr = draggedElement.getAttribute('data-item-info');
+                    let itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                    
+                    // Create a new container for the dragged element
+                    const newDiv = document.createElement("div");
+                    newDiv.classList.add(`${sectionType}-inventory-item`);
+                    newDiv.draggable = false;
+
+                    // Clone the dragged element before appending
+                    const clonedElement = draggedElement.cloneNode(true);
+                    newDiv.appendChild(clonedElement);
+
+                    // Append the new container to the target zone
+                    targetZone.appendChild(newDiv);
+
+                    // Remove the old container from the original parent
+                    if (originalParent && originalParent.parentElement) {
+                        originalParent.parentElement.removeChild(originalParent);
+                    }
+                    
+                    // Perform the API transfer in the background
+                    performApiTransfer(itemData, targetZone, draggedElement, originalParent);
+                });
+            });
+            
+            // Function to handle API transfers
+            async function performApiTransfer(itemData, targetZone, draggedElement, originalParent) {
+                try {
+                    // Determine if transferring to vault
+                    const targetIsVault = targetZone.closest(".vault-category-items") !== null;
+                    const sourceIsVault = originalParent.closest(".vault-category-items") !== null;
+                    
+                    // If target is not vault, determine destination character ID
+                    let destinationCharacterId = null;
+                    if (!targetIsVault) {
+                        const destinationClass = targetZone.closest(".column")?.id; // hunter, warlock, or titan
+                        if (destinationClass) {
+                            const response = await fetch('/api/characters');
+                            const characterData = await response.json();
+                            
+                            if (characterData && characterData.characterData) {
+                                destinationCharacterId = characterData.characterData[destinationClass]?.characterId;
                             }
                         }
-                
-                        let transferResult;
-                
-                        if (sourceIsVault && !targetIsVault) {
-                            // From vault to character
-                            transferResult = await transferItem(
-                                itemData.itemReferenceHash,
-                                1, // stack size
-                                false, // transferToVault is false when going from vault to character
-                                itemData.itemInstanceId,
-                                destinationCharacterId
-                            );
-                        } else if (!sourceIsVault && targetIsVault) {
-                            // From character to vault
-                            transferResult = await transferItem(
-                                itemData.itemReferenceHash,
-                                1, // stack size
-                                true, // transferToVault is true when going to vault
-                                itemData.itemInstanceId,
-                                itemData.characterId
-                            );
-                        } else if (!sourceIsVault && !targetIsVault) {
-                            // From character to character (via vault)
+                    }
+                    
+                    let transferResult = false;
+                    
+                    if (sourceIsVault && !targetIsVault) {
+                        // From vault to character
+                        transferResult = await transferItem(
+                            itemData.itemReferenceHash,
+                            1, // stack size
+                            false, // transferToVault is false when going from vault to character
+                            itemData.itemInstanceId,
+                            destinationCharacterId
+                        );
+                    } else if (!sourceIsVault && targetIsVault) {
+                        // From character to vault
+                        transferResult = await transferItem(
+                            itemData.itemReferenceHash,
+                            1, // stack size
+                            true, // transferToVault is true when going to vault
+                            itemData.itemInstanceId,
+                            itemData.characterId
+                        );
+                    } else if (!sourceIsVault && !targetIsVault) {
+                        // From character to character (via vault)
+                        transferResult = await transferItem(
+                            itemData.itemReferenceHash,
+                            1,
+                            true,
+                            itemData.itemInstanceId,
+                            itemData.characterId
+                        );
+                        
+                        if (transferResult) {
                             transferResult = await transferItem(
                                 itemData.itemReferenceHash,
                                 1,
-                                true,
+                                false,
                                 itemData.itemInstanceId,
-                                itemData.characterId
+                                destinationCharacterId
                             );
-                
-                            if (transferResult) {
-                                transferResult = await transferItem(
-                                    itemData.itemReferenceHash,
-                                    1,
-                                    false,
-                                    itemData.itemInstanceId,
-                                    destinationCharacterId
-                                );
-                            }
-                        }
-                
-                        if (transferResult) {
-                            // Clone the dragged element before appending
-                            const clonedElement = draggedElement.cloneNode(true);
-                            targetZone.appendChild(clonedElement);
-                
-                            // Remove the original element from its parent
-                            if (originalParent && originalParent.contains(draggedElement)) {
-                                originalParent.removeChild(draggedElement);
-                            }
-                        } else {
-                            console.error("Transfer failed, returning item to original location");
-                            if (originalParent) {
-                                originalParent.appendChild(draggedElement);
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Error during item transfer:", error);
-                        if (originalParent) {
-                            originalParent.appendChild(draggedElement);
                         }
                     }
-                });
-            });
+                    
+                    if (!transferResult) {
+                        console.error("Transfer failed");
+                    }
+                } catch (error) {
+                    console.error("Error during item transfer:", error);
+                }
+            }
         });
         
         async function fetchData() {
