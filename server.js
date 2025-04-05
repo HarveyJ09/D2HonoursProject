@@ -1860,6 +1860,43 @@ app.post('/api/transferitem', async (req, res) => {
     }
 });
 
+app.post('/api/equipitem', async (req, res) => {
+    try {
+        const { membershipType } = req.session;
+        const { itemReferenceHash, itemId, characterId } = req.body;
+
+        if (!membershipType || !itemReferenceHash || !itemId || !characterId) {
+            return res.status(400).json({ error: "Missing required parameters" });
+        }
+
+        const equipUrl = `https://www.bungie.net/Platform/Destiny2/Actions/Items/EquipItem/`;
+
+        const payload = {
+            itemReferenceHash,
+            itemId,
+            characterId,
+            membershipType
+        };
+
+        const response = await axios.post(equipUrl, payload, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.data.ErrorCode !== 1) {
+            return res.status(500).json({ error: "Failed to equip item", details: response.data });
+        }
+
+        res.json({ message: "Item equipped successfully", data: response.data });
+    } catch (error) {
+        console.error("Error equipping item:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to equip item" });
+    }
+});
+
 // Load SSL certificates
 const options = {
     key: fs.readFileSync('certs/server.key'),

@@ -378,21 +378,35 @@
             height: 40px;
             margin-right: 15px;
           }
+
+          .equipped-box{
+            width: 75px;
+            height: 90px;
+            background-color: #444; /* Default background color */
+            border: 2px solid white; /* Optional border */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px; /* Optional margin */
+            border-radius: 5px; /* Optional rounded corners */
+            transform: translate(-25px, -9px);
+            display:none;
+          }
         
     </style>
 </head>
 <body>
-    <header>
-        <div style="position: absolute; top: 10px; right: 10px;">
+    <header style="position: fixed; top: 0; right: 0; width: 100%; background-color: #3d2929; padding: 10px; z-index: 100; display: flex; justify-content: flex-end; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <div style="margin-right: 20px;">
             <button onclick="
             clearFetchedData();
             fetchData();"
-            style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer;" 
+            style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer; margin-right: 10px;" 
             aria-keyshortcuts="R">
             <img src="assets/reload.png" alt="Refresh Icon" style="width: 20px; height: 20px; filter: invert(1); transform: translateX(-2px)" title="Refresh">
             </button>
             <button onclick="clearSessionData();" 
-            style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer;" 
+            style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer; margin-right: 10px;" 
             title="Clear Session Data">
             <img src="assets/logout.png" alt="Logout Icon" style="width: 20px; height: 20px; filter: invert(1);">
             </button>
@@ -412,6 +426,7 @@
                     <div style="margin-top:70px;" id="hunter-inventory-items" class="item-grid">
                         <div class="hunter-category category" id="Kinetic Weapons">
                             <h3>Kinetic Weapons</h3>
+                            <div class="equipped-box" style="position:absolute"></div>
                             <div class="equipped-items"></div>
                             <div class="box" style="position:absolute"></div>
                             <div class="category-items"></div>
@@ -1010,7 +1025,7 @@
                 popup.style.display = 'none';
               }
             }
-          }
+        }
 
         async function transferItem(itemReferenceHash, stackSize, transferToVault, itemInstanceId, characterId) {
             try {
@@ -1021,8 +1036,6 @@
                     itemId: itemInstanceId,
                     characterId: characterId
                 };
-                
-                console.log('Sending transfer request with payload:', payload);
                 
                 const response = await fetch('/api/transferitem', {
                     method: 'POST',
@@ -1036,32 +1049,74 @@
                 const data = await response.json();
                 
                 if (data.error) {
-                    console.error('Transfer error:', data.error);
+                    showNotification('Transfer failed: ' + data.error, 'error');
                     return false;
                 }
                 
-                console.log('Transfer successful:', data.message);
                 return true;
             } catch (error) {
-                console.error('Transfer failed:', error);
+                showNotification('Transfer failed: ' + error, 'error');
                 return false;
             }
+        }
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.classList.add('notification', type);
+            notification.textContent = message;
+            
+            // Style the notification
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.left = '50%';
+            notification.style.transform = 'translateX(-50%)';
+            notification.style.padding = '10px 20px';
+            notification.style.borderRadius = '5px';
+            notification.style.zIndex = '9999';
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s';
+            
+            if (type === 'success') {
+                notification.style.backgroundColor = '#4CAF50';
+                notification.style.color = 'white';
+            } else if (type === 'error') {
+                notification.style.backgroundColor = '#F44336';
+                notification.style.color = 'white';
+            }
+            
+            // Add to document and animate
+            document.body.appendChild(notification);
+            setTimeout(() => notification.style.opacity = '1', 10);
+            
+            // Remove after delay
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
         }
 
         document.addEventListener("DOMContentLoaded", () => {
             let draggedElement = null;
             let originalParent = null;
+            let originalCategory = null;
 
             document.addEventListener("dragstart", (event) => {
                 // Handle both types of item containers
                 if (event.target.classList.contains("item-container") || event.target.classList.contains("item-container-equipped")) {
                     draggedElement = event.target;
                     originalParent = draggedElement.parentElement;
+                    // Store the original character category 
+                    originalCategory = originalParent.closest(".category")?.id;
                     event.dataTransfer.effectAllowed = "move";
+
+                    // Add a data transfer type to track if it's equipped
+                    event.dataTransfer.setData('isEquipped', draggedElement.classList.contains('item-container-equipped'));
+                    
                     setTimeout(() => draggedElement.classList.add("hidden"), 0);
             
                     // Highlight all valid drop zones
-                    document.querySelectorAll(".box, .vault-box").forEach((box) => {
+                    document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
                         box.classList.add("highlight-drop-zone");
                         box.style.display = "flex"; // Ensure the box is visible
                     });
@@ -1073,7 +1128,7 @@
                     draggedElement.classList.remove("hidden");
             
                     // Remove highlight from all drop zones
-                    document.querySelectorAll(".box, .vault-box").forEach((box) => {
+                    document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
                         box.classList.remove("highlight-drop-zone");
                         box.style.display = "none"; // Reset box display to none
                     });
@@ -1081,7 +1136,107 @@
                     // Reset drag variables
                     draggedElement = null;
                     originalParent = null;
+                    originalCategory = null;
                 }
+            });
+
+            // Add event listeners for the equipped-items containers
+            document.querySelectorAll(".equipped-items").forEach((zone) => {
+                zone.addEventListener("dragover", (event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                });
+
+                zone.addEventListener("drop", async (event) => {
+                    event.preventDefault();
+                    if (!draggedElement) return;
+                    
+                    let targetZone = zone;
+                    let targetCategory = targetZone.closest(".category")?.id;
+                    let targetCharacter = targetZone.closest(".column")?.id || "vault";
+                    let originalCharacter = originalParent.closest(".column")?.id || "vault";
+
+                    // Remove highlight from all drop zones
+                    document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
+                        box.classList.remove("highlight-drop-zone");
+                        box.style.display = "none"; // Reset box display to none
+                    });
+
+                    // Get item data for API equip
+                    let itemInfoStr = draggedElement.getAttribute('data-item-info');
+                    let itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                    
+                    // Store the previously equipped item if it exists
+                    const previousEquippedEl = targetZone.querySelector(".item-container-equipped");
+                    let previousEquippedData = null;
+                    
+                    if (previousEquippedEl) {
+                        const previousItemInfoStr = previousEquippedEl.getAttribute('data-item-info');
+                        previousEquippedData = JSON.parse(decodeURIComponent(previousItemInfoStr));
+                    }
+                    
+                    // Show equipping notification
+                    showNotification('Equipping item...', 'info');
+                    
+                    // Perform the API equip
+                    const equipSuccess = await performApiEquip(itemData, targetZone, draggedElement, originalParent);
+
+                    if (equipSuccess) {
+                        // First, move previously equipped item to category-items if it exists
+                        if (previousEquippedEl) {
+                            // Find the category items container
+                            const categoryItemsContainer = targetZone.closest(".category").querySelector(".category-items");
+                            
+                            if (categoryItemsContainer) {
+                                // Create a new container for the previously equipped item
+                                const inventoryItemDiv = document.createElement("div");
+                                inventoryItemDiv.classList.add(`${targetCharacter}-inventory-item`);
+                                inventoryItemDiv.draggable = false;
+                                
+                                // Clone the previously equipped item and update its style
+                                const previousItemClone = previousEquippedEl.cloneNode(true);
+                                previousItemClone.classList.remove("item-container-equipped");
+                                previousItemClone.classList.add("item-container");
+                                inventoryItemDiv.appendChild(previousItemClone);
+                                
+                                // Add the previously equipped item to the category items
+                                categoryItemsContainer.appendChild(inventoryItemDiv);
+                            }
+                        }
+                        
+                        // Store a copy of the dragged element before clearing anything
+                        const savedDraggedElement = draggedElement ? draggedElement.cloneNode(true) : null;
+                        
+                        if (savedDraggedElement) {
+                            // Clear the equipped slot
+                            targetZone.innerHTML = '';
+                            
+                            // Create a new element for the equipped item
+                            const newEquippedDiv = document.createElement("div");
+                            newEquippedDiv.classList.add(`${targetCharacter}-equipped-item`);
+                            newEquippedDiv.draggable = false;
+    
+                            // Use the saved copy of the dragged element
+                            savedDraggedElement.classList.remove("item-container");
+                            savedDraggedElement.classList.add("item-container-equipped");
+                            newEquippedDiv.appendChild(savedDraggedElement);
+
+                            // Add the newly equipped item to the equipped zone
+                            targetZone.appendChild(newEquippedDiv);
+                            
+                            // Remove the dragged item from its original parent container
+                            if (originalParent) {
+                                // Get the inventory-item parent too (which is the parent of originalParent)
+                                const inventoryItemParent = originalParent.parentElement;
+                                if (inventoryItemParent && inventoryItemParent.classList.contains(`${originalCharacter}-inventory-item`)) {
+                                    inventoryItemParent.remove(); // This removes both the item-container and its parent div
+                                } else if (originalParent.parentElement) {
+                                    originalParent.remove(); // Fallback if no parent found
+                                }
+                            }
+                        }
+                    }
+                });
             });
 
             document.querySelectorAll(".category-items, .vault-category-items").forEach((zone) => {
@@ -1095,19 +1250,30 @@
                     if (!draggedElement) return;
                     
                     let targetZone = zone;
+                    let targetCategory = targetZone.closest(".category")?.id;
+                    let targetCharacter = targetZone.closest(".column")?.id || "vault";
+                    let originalCharacter = originalParent.closest(".column")?.id || "vault";
 
-                    // Prevent dropping into the same location
-                    if (originalParent === targetZone) {
+                    // Prevent dropping into the same location or same character+category
+                    if (originalParent === targetZone || 
+                        (originalCharacter === targetCharacter && originalCategory === targetCategory && targetCharacter !== "vault")) {
                         return;
                     }
 
+                    // Remove highlight from all drop zones
+                    document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
+                        box.classList.remove("highlight-drop-zone");
+                        box.style.display = "none"; // Reset box display to none
+                    });
+
                     // Check if the target zone is not the vault and already has 9 items
                     if (!targetZone.closest(".vault-category-items") && targetZone.children.length >= 9) {
+                        showNotification('Character inventory is full for this category', 'error');
                         return;
                     }
 
                     // Determine the section type based on the parent container
-                    const sectionType = targetZone.closest(".column")?.id || "vault";
+                    const sectionType = targetCharacter;
                     
                     // Get item data for API transfer
                     let itemInfoStr = draggedElement.getAttribute('data-item-info');
@@ -1120,6 +1286,9 @@
 
                     // Clone the dragged element before appending
                     const clonedElement = draggedElement.cloneNode(true);
+                    // If it was equipped, change it back to a regular item
+                    clonedElement.classList.remove("item-container-equipped");
+                    clonedElement.classList.add("item-container");
                     newDiv.appendChild(clonedElement);
 
                     // Append the new container to the target zone
@@ -1130,11 +1299,101 @@
                         originalParent.parentElement.removeChild(originalParent);
                     }
                     
+                    // Show transferring notification
+                    showNotification('Transferring item...', 'info');
+                    
                     // Perform the API transfer in the background
                     performApiTransfer(itemData, targetZone, draggedElement, originalParent);
                 });
             });
-            
+
+            async function performApiEquip(itemData, targetZone, draggedElement, originalParent) {
+                try {
+                    // Determine the character type from the closest column
+                    const characterType = targetZone.closest(".column")?.id; // hunter, warlock, or titan
+                    
+                    if (characterType) {
+                        // Show equipping notification
+                        showNotification('Equipping item...', 'info');
+                        
+                        // Get the character ID
+                        const response = await fetch('/api/characters');
+                        const characterData = await response.json();
+                        
+                        if (characterData && characterData.characterData) {
+                            const characterId = characterData.characterData[characterType]?.characterId;
+                            
+                            // First transfer the item to the character if it's in the vault
+                            if (originalParent.closest(".vault-category-items")) {
+                                const transferResult = await transferItem(
+                                    itemData.itemReferenceHash,
+                                    1, // stack size
+                                    false, // transferToVault is false when going from vault to character
+                                    itemData.itemInstanceId,
+                                    characterId
+                                );
+                                
+                                if (!transferResult) {
+                                    showNotification('Failed to transfer item to character before equipping', 'error');
+                                    return false;
+                                }
+                            } else if (originalParent.closest(".column")?.id !== characterType) {
+                                // If item is on another character, transfer via vault
+                                const sourceCharacterId = itemData.characterId;
+                                
+                                // First to vault
+                                const toVaultResult = await transferItem(
+                                    itemData.itemReferenceHash,
+                                    1,
+                                    true, // to vault
+                                    itemData.itemInstanceId,
+                                    sourceCharacterId
+                                );
+                                
+                                if (!toVaultResult) {
+                                    showNotification('Failed to transfer item between characters', 'error');
+                                    return false;
+                                }
+                                
+                                // Then to destination character
+                                const toCharacterResult = await transferItem(
+                                    itemData.itemReferenceHash,
+                                    1,
+                                    false, // from vault to character
+                                    itemData.itemInstanceId,
+                                    characterId
+                                );
+                                
+                                if (!toCharacterResult) {
+                                    showNotification('Failed to transfer item to destination character', 'error');
+                                    return false;
+                                }
+                            }
+                            
+                            // Then equip the item
+                            const equipResult = await equipItem(
+                                itemData.itemReferenceHash,
+                                itemData.itemInstanceId,
+                                characterId
+                            );
+                            
+                            if (equipResult) {
+                                showNotification('Item equipped successfully', 'success');
+                                return true;
+                            } else {
+                                showNotification('Failed to equip item', 'error');
+                                return false;
+                            }
+                        }
+                    }
+                    return false;
+                } catch (error) {
+                    console.error("Error in performApiEquip:", error);
+                    showNotification('Error equipping item', 'error');
+                    return false;
+                }
+            }
+
             // Function to handle API transfers
             async function performApiTransfer(itemData, targetZone, draggedElement, originalParent) {
                 try {
@@ -1197,19 +1456,52 @@
                         }
                     }
                     
-                    if (!transferResult) {
-                        console.error("Transfer failed");
+                    if (transferResult) {
+                        showNotification('Transfer successful', 'success');
+                        console.log('Item transfer successful');
                     }
                 } catch (error) {
-                    console.error("Error during item transfer:", error);
+                    showNotification('Error during transfer', 'error');
                 }
             }
         });
+
+        async function equipItem(itemReferenceHash, itemInstanceId, characterId) {
+            try{
+
+                const payload = {
+                    itemReferenceHash: itemReferenceHash,
+                    itemId: itemInstanceId,
+                    characterId: characterId
+                };
+
+                const response = await fetch('/api/equipitem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                if (data.error) {
+                    showNotification('Equip failed: ' + data.error, 'error');
+                    return false;
+                }
+
+                return true;
+            }catch (error) {
+                console.error("Error equipping item:", error);
+            }
+        }
         
         async function fetchData() {
-            fetchCharacterData();
-            setTimeout(() => {
-                Promise.all([
+            try {
+                // First fetch character data
+                await fetchCharacterData();
+                
+                // Then fetch the rest of the data in parallel
+                await Promise.all([
                     fetchInventoryData('hunter'),
                     fetchInventoryData('warlock'),
                     fetchInventoryData('titan'),
@@ -1217,8 +1509,12 @@
                     fetchEquippedData('warlock'),
                     fetchEquippedData('titan'),
                     fetchVaultData()
-                ]).then(() => console.log("All data fetched simultaneously"));
-            }, 2000);
+                ]);
+                
+                console.log("All data fetched successfully");
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
         }
 
         fetchData();
