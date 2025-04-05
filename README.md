@@ -6,12 +6,12 @@ Harvey Jarvis's Honours Project Repository
 
 - Pull User data and items [x]
 - Transferring items function between characters and vault [x]
-- Equipping and unequipping items from api []
+- Equipping and unequipping items from api [] (Half done)
 
 
 2. Additional:
 
-- Add information on materials []
+- Add information on materials [x]
 - Add Lore page []
 - Add search bar to filter for items []
 - Add subclass information []
