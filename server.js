@@ -1897,6 +1897,57 @@ app.post('/api/equipitem', async (req, res) => {
     }
 });
 
+app.get('/api/currencies', async (req, res) => {
+    try {
+        const { membershipId, membershipType } = req.session;
+
+        if (!membershipId || !membershipType) {
+            return res.status(400).json({ error: "Missing session data." });
+        }
+
+        const currenciesUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/?components=103`;
+        const currenciesResponse = await axios.get(currenciesUrl, {
+            headers: {
+                'X-API-KEY': API_KEY,
+                Authorization: `Bearer ${req.session.accessToken}`
+            }
+        });
+
+        const allCurrencies = currenciesResponse.data.Response.profileCurrencies.data || {};
+        const currenciesData = {
+            items: allCurrencies.items || [] // Return all currency items without filtering
+        };
+
+        // Fetch definitions for each currency item
+        const definitionPromises = currenciesData.items.map(item =>
+            axios.get(`https://www.bungie.net/Platform/Destiny2/Manifest/DestinyInventoryItemDefinition/${item.itemHash}/`, {
+                headers: { 'X-API-KEY': API_KEY }
+            }).then(definitionResponse => {
+                if (definitionResponse.data.Response) {
+                    return {
+                        hash: item.itemHash,
+                        quantity: item.quantity,
+                        name: definitionResponse.data.Response.displayProperties.name,
+                        icon: `https://www.bungie.net${definitionResponse.data.Response.displayProperties.icon}`,
+                        
+                    };
+                }
+                return null;
+            }).catch(err => {
+                console.error(`Error fetching definition for currency ${item.itemHash}:`, err.message);
+                return null;
+            })
+        );
+
+        const currencyDefinitions = await Promise.all(definitionPromises);
+        res.json({ currencies: currencyDefinitions.filter(Boolean) });
+
+    } catch (error) {
+        console.error("Error fetching currencies:", error.response ? error.response.data : error.message);
+        res.status(500).json({ error: "Failed to retrieve currencies" });
+    }
+});
+
 // Load SSL certificates
 const options = {
     key: fs.readFileSync('certs/server.key'),

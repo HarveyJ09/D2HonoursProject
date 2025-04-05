@@ -598,6 +598,7 @@
 
         <div class="vault">
             <h2>Vault</h2>
+            <div id="currencies" style="position:absolute; display: flex; align-items: center; justify-content: flex-start; margin: 10px 0; background-color: rgba(50, 50, 50, 0.7); padding: 10px; border-radius: 5px;"></div>
             <div style="margin-top:250px" id="vault-items" class="item-grid">
                 <div class="vault-category category" id="Kinetic Weapons" style="width: 100%;">
                     <h3>Kinetic Weapons</h3>
@@ -669,12 +670,12 @@
     
                 function updateCharacterUI(classType) {
                     const charData = data.characterData[classType];
-    
+
                     if (!charData) return;
-    
+
                     document.getElementById(`${classType}-emblem`).src = `https://www.bungie.net${charData.emblemPath}`;
                     document.getElementById(`${classType}-power`).textContent = `Power: ${charData.light}`;
-    
+
                     // Define stat IDs and corresponding image paths
                     const statIcons = {
                         "2996146975": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/mobility.svg",  // Mobility
@@ -684,23 +685,32 @@
                         "144602215": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/intellect.svg",  // Intellect
                         "4244567218": "https://raw.githubusercontent.com/justrealmilk/destiny-icons/394ed051455e938f72ddd600d42cf87600ec7172/general/strength.svg"    // Strength
                     };
-    
+
+                    const statNames = {
+                        "2996146975": "Mobility",
+                        "392767087": "Resilience",
+                        "1943323491": "Recovery",
+                        "1735777505": "Discipline",
+                        "144602215": "Intellect",
+                        "4244567218": "Strength"
+                    };
+
                     let statsHtml = "";
                     for (const [statId, icon] of Object.entries(statIcons)) {
                         let statValue = charData.stats[statId] || "--";
-                        statsHtml += `<div class="stat"><img src="${icon}" class="icon" alt=""><span>${statValue}</span></div>`;
+                        statsHtml += `<div class="stat"><img src="${icon}" class="icon" style="height:24px; width:24px;" alt="${statNames[statId]}"><span>${statValue}</span></div>`;
                     }
-    
+
                     document.getElementById(`${classType}-stats`).innerHTML = statsHtml;
                 }
-    
+
                 updateCharacterUI("hunter");
                 updateCharacterUI("warlock");
                 updateCharacterUI("titan");
-    
-            } catch (error) {
-                console.error("Failed to fetch character data", error);
-            }
+
+                } catch (error) {
+                    console.error("Failed to fetch character data", error);
+                }
         }
     
         async function fetchInventoryData(characterType) {
@@ -820,6 +830,45 @@
 
             } catch (error) {
             console.error("Failed to fetch vault data", error);
+            }
+        }
+
+        async function fetchCurrencyData() {
+            try {
+                let response = await fetch('/api/currencies', { credentials: 'include' });
+                let data = await response.json();
+                
+                // Display currencies in the designated container
+                const currenciesContainer = document.getElementById('currencies');
+                currenciesContainer.innerHTML = ''; // Clear previous content
+                
+                if (data && data.currencies) {
+                    
+                    const targetCurrencies = [0, 2].map(index => data.currencies[index]).filter(Boolean);
+                    
+                    targetCurrencies.forEach(currency => {
+                        const currencyElement = document.createElement('div');
+                        currencyElement.style.display = 'flex';
+                        currencyElement.style.alignItems = 'center';
+                        currencyElement.style.marginRight = '20px';
+                        
+                        currencyElement.innerHTML = `
+                            <img src="${currency.icon}" alt="${currency.name}" style="width: 24px; height: 24px; margin-right: 8px;">
+                            <span style="color: #ffcc00; font-weight: bold;">${currency.quantity.toLocaleString()}</span>
+                        `;
+                        
+                        currenciesContainer.appendChild(currencyElement);
+                    });
+                    
+                    console.log("Currency Data displayed:", targetCurrencies);
+                } else {
+                    currenciesContainer.innerHTML = '<span style="color: #ccc;">No currency data available</span>';
+                    console.log("Currency Data:", data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch currency data", error);
+                document.getElementById('currencies').innerHTML = 
+                    '<span style="color: #ff6666;">Error loading currencies</span>';
             }
         }
     
@@ -1508,6 +1557,7 @@
                     fetchEquippedData('hunter'),
                     fetchEquippedData('warlock'),
                     fetchEquippedData('titan'),
+                    fetchCurrencyData(),
                     fetchVaultData()
                 ]);
                 
