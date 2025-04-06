@@ -6,7 +6,7 @@ Harvey Jarvis's Honours Project Repository
 
 - Pull User data and items [x]
 - Transferring items function between characters and vault [x]
-- Equipping and unequipping items from api [] (Half done)
+- Equipping and unequipping items from api [x] Done but tiny problem with original item still displaying (This fixes when the server sends back updated info).
 
 
 2. Additional:
