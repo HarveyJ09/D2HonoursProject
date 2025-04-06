@@ -396,7 +396,12 @@
     </style>
 </head>
 <body>
-    <header style="position: fixed; top: 0; right: 0; width: 100%; background-color: #3d2929; padding: 10px; z-index: 100; display: flex; justify-content: flex-end; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+    <header style="position: fixed; top: 0; right: 0; width: 100%; background-color: #3d2929; padding: 10px; z-index: 100; display: flex; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+        <div style="margin-left: 20px;">
+            <input id="itemSearchInput" type="text" placeholder="Search items..." 
+                style="padding: 5px; border-radius: 5px; border: 1px solid #ccc; width: 200px; background-color: #222; color: white;"
+                onkeyup="searchItems()">
+        </div>
         <div style="margin-right: 20px;">
             <button onclick="
             clearFetchedData();
@@ -412,6 +417,63 @@
             </button>
         </div>
     </header>
+    <script>
+        function searchItems() {
+            // Get the search input value
+            const searchText = document.getElementById('itemSearchInput').value.toLowerCase();
+            
+            // Get all item containers
+            const allItems = document.querySelectorAll('.item-container, .item-container-equipped');
+            
+            // Reset previous styling for all items
+            allItems.forEach(item => {
+                item.style.boxShadow = '';
+                item.style.border = item.classList.contains('item-container-equipped') ? 
+                    '2px solid white' : '2px solid white';
+                item.style.opacity = '1'; // Reset opacity
+                item.style.filter = 'none'; // Reset filter
+            });
+            
+            if (searchText.trim() === '') return;
+            
+            // Track if we found any matches
+            let foundMatches = false;
+            
+            // Find matches and mark them
+            const matchingItems = [];
+            allItems.forEach(item => {
+                try {
+                    const itemInfoStr = decodeURIComponent(item.getAttribute('data-item-info'));
+                    const itemData = JSON.parse(itemInfoStr);
+                    
+                    // Check if item name or other properties match the search
+                    if (itemData.name && itemData.name.toLowerCase().includes(searchText)) {
+                        matchingItems.push(item);
+                        foundMatches = true;
+                    }
+                } catch (error) {
+                    console.error('Error parsing item data for search:', error);
+                }
+            });
+            
+            if (foundMatches) {
+                // Dim all non-matching items
+                allItems.forEach(item => {
+                    if (!matchingItems.includes(item)) {
+                        item.style.opacity = '0.3'; // Dim non-matching items
+                        item.style.filter = 'grayscale(70%)'; // Apply grayscale to non-matches
+                    } else {
+                        // Highlight matching items
+                        item.style.boxShadow = '0 0 10px 3px gold';
+                        item.style.border = '2px solid gold';
+                        item.style.opacity = '1';
+                        item.style.filter = 'none';
+                        item.style.zIndex = '2'; // Bring matching items to front
+                    }
+                });
+            }
+        }
+    </script>
     <h1 id="welcome-message">Loading...</h1>
     <div class="container">
         <div class="left-section">
@@ -598,8 +660,9 @@
 
         <div class="vault">
             <h2>Vault</h2>
-            <div id="currencies" style="position:absolute; display: flex; align-items: center; justify-content: flex-start; margin: 10px 0; background-color: rgba(50, 50, 50, 0.7); padding: 10px; border-radius: 5px;"></div>
-            <div style="margin-top:250px" id="vault-items" class="item-grid">
+            <div id="currencies" style="position:absolute; display: flex; align-items: center; justify-content: flex-start; margin: 10px 0; background-color: rgba(50, 50, 50, 0.7); padding: 10px; border-radius: 5px; z-index: 10;"></div>
+            <div id="materials" style="position:absolute; display: flex; align-items: center; justify-content: flex-start; margin: 10px 0; background-color: rgba(50, 50, 50, 0.7); padding: 10px; border-radius: 5px; margin-top: 60px; z-index: 10;"></div>
+            <div style="margin-top:262px" id="vault-items" class="item-grid">
                 <div class="vault-category category" id="Kinetic Weapons" style="width: 100%;">
                     <h3>Kinetic Weapons</h3>
                     <div class="vault-box" style="position:absolute"></div>
@@ -869,6 +932,49 @@
                 console.error("Failed to fetch currency data", error);
                 document.getElementById('currencies').innerHTML = 
                     '<span style="color: #ff6666;">Error loading currencies</span>';
+            }
+        }
+
+        async function fetchInventoryMaterials() {
+            try {
+                let response = await fetch('/api/inventorymaterials', { credentials: 'include' });
+                let data = await response.json();
+                console.log("Inventory Materials Data:", data);
+                
+                // Display materials in a div with id="materials"
+                const materialsContainer = document.getElementById('materials');
+                if (materialsContainer && data && data.materials) {
+                    materialsContainer.innerHTML = ''; // Clear previous content
+                    
+                    // Create a grid container
+                    const gridContainer = document.createElement('div');
+                    gridContainer.style.display = 'grid';
+                    gridContainer.style.gridTemplateColumns = 'repeat(20, 1fr)';
+                    gridContainer.style.gridTemplateRows = 'repeat(5, auto)';
+                    gridContainer.style.gap = '10px';
+                    gridContainer.style.width = '100%';
+                    
+                    data.materials.forEach((material, index) => {
+                        if (index < 60) { // Limit to 36 items (12x3 grid)
+                            const materialElement = document.createElement('div');
+                            materialElement.style.display = 'flex';
+                            materialElement.style.flexDirection = 'column';
+                            materialElement.style.alignItems = 'center';
+                            materialElement.style.justifyContent = 'center';
+                            
+                            materialElement.innerHTML = `
+                                <img src="${material.icon}" alt="${material.name}" style="width: 24px; height: 24px; margin-bottom: 4px;" title="${material.name}">
+                                <span style="color: #ffcc00; font-weight: bold; font-size: 12px;">${material.quantity.toLocaleString()}</span>
+                            `;
+                            
+                            gridContainer.appendChild(materialElement);
+                        }
+                    });
+                    
+                    materialsContainer.appendChild(gridContainer);
+                }
+            } catch (error) {
+                console.error("Failed to fetch inventory materials", error);
             }
         }
     
@@ -1198,93 +1304,110 @@
 
                 zone.addEventListener("drop", async (event) => {
                     event.preventDefault();
-                    if (!draggedElement) return;
-                    
+                
+                    if (!draggedElement) {
+                        console.error("Dragged element is null during drop event.");
+                        return;
+                    }
+                
                     let targetZone = zone;
                     let targetCategory = targetZone.closest(".category")?.id;
                     let targetCharacter = targetZone.closest(".column")?.id || "vault";
-                    let originalCharacter = originalParent.closest(".column")?.id || "vault";
-
+                    let originalCharacter = originalParent?.closest(".column")?.id || "vault";
+                
+                    // Store a clone of the dragged element early
+                    const draggedElementClone = draggedElement.cloneNode(true);
+                
                     // Remove highlight from all drop zones
                     document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
                         box.classList.remove("highlight-drop-zone");
                         box.style.display = "none"; // Reset box display to none
                     });
-
+                
                     // Get item data for API equip
-                    let itemInfoStr = draggedElement.getAttribute('data-item-info');
-                    let itemData = JSON.parse(decodeURIComponent(itemInfoStr));
-                    
-                    // Store the previously equipped item if it exists
-                    const previousEquippedEl = targetZone.querySelector(".item-container-equipped");
-                    let previousEquippedData = null;
-                    
-                    if (previousEquippedEl) {
-                        const previousItemInfoStr = previousEquippedEl.getAttribute('data-item-info');
-                        previousEquippedData = JSON.parse(decodeURIComponent(previousItemInfoStr));
+                    let itemInfoStr;
+                    try {
+                        itemInfoStr = draggedElement.getAttribute('data-item-info');
+                    } catch (error) {
+                        console.error("Failed to retrieve item data from dragged element:", error);
+                        return;
                     }
-                    
+                
+                    let itemData;
+                    try {
+                        itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                    } catch (error) {
+                        console.error("Failed to parse item data:", error);
+                        return;
+                    }
+                
+                    // 1. Handle previously equipped item - move it to character inventory
+                    const previousEquippedEl = targetZone.querySelector(".item-container-equipped");
+                    if (previousEquippedEl) {
+                        const categoryItemsContainer = targetZone.closest(".category").querySelector(".category-items");
+                
+                        if (categoryItemsContainer) {
+                            // Create a new inventory item container
+                            const inventoryItemDiv = document.createElement("div");
+                            inventoryItemDiv.classList.add(`${targetCharacter}-inventory-item`);
+                            inventoryItemDiv.draggable = false;
+                
+                            // Clone the previously equipped item and update its style to regular item
+                            const previousItemClone = previousEquippedEl.cloneNode(true);
+                            previousItemClone.classList.remove("item-container-equipped");
+                            previousItemClone.classList.add("item-container");
+                            inventoryItemDiv.appendChild(previousItemClone);
+                
+                            // Add the previously equipped item to the character inventory
+                            categoryItemsContainer.appendChild(inventoryItemDiv);
+                        }
+                    }
+                
                     // Show equipping notification
                     showNotification('Equipping item...', 'info');
-                    
+                
                     // Perform the API equip
                     const equipSuccess = await performApiEquip(itemData, targetZone, draggedElement, originalParent);
-
+                
                     if (equipSuccess) {
-                        // First, move previously equipped item to category-items if it exists
-                        if (previousEquippedEl) {
-                            // Find the category items container
-                            const categoryItemsContainer = targetZone.closest(".category").querySelector(".category-items");
-                            
-                            if (categoryItemsContainer) {
-                                // Create a new container for the previously equipped item
-                                const inventoryItemDiv = document.createElement("div");
-                                inventoryItemDiv.classList.add(`${targetCharacter}-inventory-item`);
-                                inventoryItemDiv.draggable = false;
-                                
-                                // Clone the previously equipped item and update its style
-                                const previousItemClone = previousEquippedEl.cloneNode(true);
-                                previousItemClone.classList.remove("item-container-equipped");
-                                previousItemClone.classList.add("item-container");
-                                inventoryItemDiv.appendChild(previousItemClone);
-                                
-                                // Add the previously equipped item to the category items
-                                categoryItemsContainer.appendChild(inventoryItemDiv);
-                            }
-                        }
-                        
-                        // Store a copy of the dragged element before clearing anything
-                        const savedDraggedElement = draggedElement ? draggedElement.cloneNode(true) : null;
-                        
-                        if (savedDraggedElement) {
-                            // Clear the equipped slot
-                            targetZone.innerHTML = '';
-                            
-                            // Create a new element for the equipped item
-                            const newEquippedDiv = document.createElement("div");
-                            newEquippedDiv.classList.add(`${targetCharacter}-equipped-item`);
-                            newEquippedDiv.draggable = false;
-    
-                            // Use the saved copy of the dragged element
-                            savedDraggedElement.classList.remove("item-container");
-                            savedDraggedElement.classList.add("item-container-equipped");
-                            newEquippedDiv.appendChild(savedDraggedElement);
-
-                            // Add the newly equipped item to the equipped zone
-                            targetZone.appendChild(newEquippedDiv);
-                            
-                            // Remove the dragged item from its original parent container
-                            if (originalParent) {
-                                // Get the inventory-item parent too (which is the parent of originalParent)
-                                const inventoryItemParent = originalParent.parentElement;
-                                if (inventoryItemParent && inventoryItemParent.classList.contains(`${originalCharacter}-inventory-item`)) {
-                                    inventoryItemParent.remove(); // This removes both the item-container and its parent div
-                                } else if (originalParent.parentElement) {
-                                    originalParent.remove(); // Fallback if no parent found
-                                }
+                        // 2. Clear the equipped slot
+                        targetZone.innerHTML = '';
+                
+                        // 3. Create a new equipped item from the dragged element clone
+                        const newEquippedDiv = document.createElement("div");
+                        newEquippedDiv.classList.add(`${targetCharacter}-equipped-item`);
+                        newEquippedDiv.draggable = false;
+                
+                        // Use the clone we created earlier
+                        const equippedItemClone = draggedElementClone;
+                        equippedItemClone.classList.remove("item-container");
+                        equippedItemClone.classList.add("item-container-equipped");
+                        newEquippedDiv.appendChild(equippedItemClone);
+                
+                        // Add the newly equipped item to the equipped zone
+                        targetZone.appendChild(newEquippedDiv);
+                
+                        // 4. Remove the original dragged item from its source location
+                        if (originalParent && originalParent.contains(draggedElement)) {
+                            console.log("Removing dragged element from original parent:", draggedElement, originalParent);
+                            originalParent.removeChild(draggedElement);
+                        } else {
+                            console.warn("Dragged element not found in original parent. Attempting to locate it in the DOM.");
+                
+                            // Attempt to locate the dragged element in the DOM and remove it
+                            const foundElement = document.querySelector(`[data-item-id="${draggedElement?.getAttribute('data-item-id')}"]`);
+                            if (foundElement && foundElement.parentElement) {
+                                console.log("Found dragged element in DOM. Removing it.");
+                                foundElement.parentElement.removeChild(foundElement);
+                            } else {
+                                console.error("Dragged element could not be found in the DOM.");
                             }
                         }
                     }
+                
+                    // Reset drag variables
+                    draggedElement = null;
+                    originalParent = null;
                 });
             });
 
@@ -1543,6 +1666,34 @@
                 console.error("Error equipping item:", error);
             }
         }
+        function syncCategoryHeights() {
+            // Get all vault-category elements
+            const vaultCategories = document.querySelectorAll('.vault-category');
+        
+            vaultCategories.forEach(vaultCategory => {
+                // Get the ID of the current vault-category
+                const categoryId = vaultCategory.id;
+        
+                // Find the corresponding category-items inside the vault-category
+                const vaultItems = vaultCategory.querySelector('.vault-category-items');
+        
+                if (vaultItems) {
+                    // Get the height of the vault-category-items
+                    const vaultHeight = vaultItems.offsetHeight;
+        
+                    // Find all characterType-category elements with the same ID
+                    const characterCategories = document.querySelectorAll(`.category[id="${categoryId}"]`);
+        
+                    // Apply the height to each characterType-category
+                    characterCategories.forEach(characterCategory => {
+                        const characterItems = characterCategory.querySelector('.category-items');
+                        if (characterItems) {
+                            characterItems.style.height = `${vaultHeight}px`;
+                        }
+                    });
+                }
+            });
+        }
         
         async function fetchData() {
             try {
@@ -1558,10 +1709,12 @@
                     fetchEquippedData('warlock'),
                     fetchEquippedData('titan'),
                     fetchCurrencyData(),
+                    fetchInventoryMaterials(),
                     fetchVaultData()
                 ]);
                 
                 console.log("All data fetched successfully");
+                syncCategoryHeights();
             } catch (error) {
                 console.error("Error fetching data:", error);
             }

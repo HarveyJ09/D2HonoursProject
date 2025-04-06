@@ -13,7 +13,7 @@ Harvey Jarvis's Honours Project Repository
 
 - Add information on materials [x]
 - Add Lore page []
-- Add search bar to filter for items []
+- Add search bar to filter for items [x]
 - Add subclass information []
 - Add perks stats to weapons popup []
 - Add bounties/quests page[]
