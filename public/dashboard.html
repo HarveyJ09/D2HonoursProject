@@ -1184,13 +1184,22 @@
 
         async function transferItem(itemReferenceHash, stackSize, transferToVault, itemInstanceId, characterId) {
             try {
+                // Check if any required parameters are undefined
+                if (!itemReferenceHash || !characterId || itemInstanceId === undefined) {
+                    console.error("Missing required transfer parameters:", { itemReferenceHash, stackSize, transferToVault, itemInstanceId, characterId });
+                    return false;
+                }
+                
+                // Ensure all values have proper types to match the API expectations
                 const payload = {
-                    itemReferenceHash: itemReferenceHash,
-                    stackSize: parseInt(stackSize),
-                    transferToVault: transferToVault,
-                    itemId: itemInstanceId,
-                    characterId: characterId
+                    itemReferenceHash: parseInt(itemReferenceHash),
+                    stackSize: parseInt(stackSize || 1),
+                    transferToVault: Boolean(transferToVault),
+                    itemId: String(itemInstanceId), // Convert to string safely
+                    characterId: String(characterId) // Convert to string safely
                 };
+                
+                console.log("Transfer payload:", payload); // Log for debugging
                 
                 const response = await fetch('/api/transferitem', {
                     method: 'POST',
@@ -1204,12 +1213,14 @@
                 const data = await response.json();
                 
                 if (data.error) {
+                    console.error("Transfer error details:", data);
                     showNotification('Transfer failed: ' + data.error, 'error');
                     return false;
                 }
                 
                 return true;
             } catch (error) {
+                console.error("Transfer exception:", error);
                 showNotification('Transfer failed: ' + error, 'error');
                 return false;
             }
@@ -1257,17 +1268,15 @@
             let originalCategory = null;
 
             document.addEventListener("dragstart", (event) => {
-                // Handle both types of item containers
                 if (event.target.classList.contains("item-container") || event.target.classList.contains("item-container-equipped")) {
                     draggedElement = event.target;
                     originalParent = draggedElement.parentElement;
-                    // Store the original character category 
-                    originalCategory = originalParent.closest(".category")?.id;
+                    originalCategory = originalParent.closest(".category")?.id; // Store the original category
                     event.dataTransfer.effectAllowed = "move";
-
+            
                     // Add a data transfer type to track if it's equipped
                     event.dataTransfer.setData('isEquipped', draggedElement.classList.contains('item-container-equipped'));
-                    
+            
                     setTimeout(() => draggedElement.classList.add("hidden"), 0);
             
                     // Highlight all valid drop zones
@@ -1295,121 +1304,7 @@
                 }
             });
 
-            // Add event listeners for the equipped-items containers
-            document.querySelectorAll(".equipped-items").forEach((zone) => {
-                zone.addEventListener("dragover", (event) => {
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                });
-
-                zone.addEventListener("drop", async (event) => {
-                    event.preventDefault();
-                
-                    if (!draggedElement) {
-                        console.error("Dragged element is null during drop event.");
-                        return;
-                    }
-                
-                    let targetZone = zone;
-                    let targetCategory = targetZone.closest(".category")?.id;
-                    let targetCharacter = targetZone.closest(".column")?.id || "vault";
-                    let originalCharacter = originalParent?.closest(".column")?.id || "vault";
-                
-                    // Store a clone of the dragged element early
-                    const draggedElementClone = draggedElement.cloneNode(true);
-                
-                    // Remove highlight from all drop zones
-                    document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
-                        box.classList.remove("highlight-drop-zone");
-                        box.style.display = "none"; // Reset box display to none
-                    });
-                
-                    // Get item data for API equip
-                    let itemInfoStr;
-                    try {
-                        itemInfoStr = draggedElement.getAttribute('data-item-info');
-                    } catch (error) {
-                        console.error("Failed to retrieve item data from dragged element:", error);
-                        return;
-                    }
-                
-                    let itemData;
-                    try {
-                        itemData = JSON.parse(decodeURIComponent(itemInfoStr));
-                    } catch (error) {
-                        console.error("Failed to parse item data:", error);
-                        return;
-                    }
-                
-                    // 1. Handle previously equipped item - move it to character inventory
-                    const previousEquippedEl = targetZone.querySelector(".item-container-equipped");
-                    if (previousEquippedEl) {
-                        const categoryItemsContainer = targetZone.closest(".category").querySelector(".category-items");
-                
-                        if (categoryItemsContainer) {
-                            // Create a new inventory item container
-                            const inventoryItemDiv = document.createElement("div");
-                            inventoryItemDiv.classList.add(`${targetCharacter}-inventory-item`);
-                            inventoryItemDiv.draggable = false;
-                
-                            // Clone the previously equipped item and update its style to regular item
-                            const previousItemClone = previousEquippedEl.cloneNode(true);
-                            previousItemClone.classList.remove("item-container-equipped");
-                            previousItemClone.classList.add("item-container");
-                            inventoryItemDiv.appendChild(previousItemClone);
-                
-                            // Add the previously equipped item to the character inventory
-                            categoryItemsContainer.appendChild(inventoryItemDiv);
-                        }
-                    }
-                
-                    // Show equipping notification
-                    showNotification('Equipping item...', 'info');
-                
-                    // Perform the API equip
-                    const equipSuccess = await performApiEquip(itemData, targetZone, draggedElement, originalParent);
-                
-                    if (equipSuccess) {
-                        // 2. Clear the equipped slot
-                        targetZone.innerHTML = '';
-                
-                        // 3. Create a new equipped item from the dragged element clone
-                        const newEquippedDiv = document.createElement("div");
-                        newEquippedDiv.classList.add(`${targetCharacter}-equipped-item`);
-                        newEquippedDiv.draggable = false;
-                
-                        // Use the clone we created earlier
-                        const equippedItemClone = draggedElementClone;
-                        equippedItemClone.classList.remove("item-container");
-                        equippedItemClone.classList.add("item-container-equipped");
-                        newEquippedDiv.appendChild(equippedItemClone);
-                
-                        // Add the newly equipped item to the equipped zone
-                        targetZone.appendChild(newEquippedDiv);
-                
-                        // 4. Remove the original dragged item from its source location
-                        if (originalParent && originalParent.contains(draggedElement)) {
-                            console.log("Removing dragged element from original parent:", draggedElement, originalParent);
-                            originalParent.removeChild(draggedElement);
-                        } else {
-                            console.warn("Dragged element not found in original parent. Attempting to locate it in the DOM.");
-                
-                            // Attempt to locate the dragged element in the DOM and remove it
-                            const foundElement = document.querySelector(`[data-item-id="${draggedElement?.getAttribute('data-item-id')}"]`);
-                            if (foundElement && foundElement.parentElement) {
-                                console.log("Found dragged element in DOM. Removing it.");
-                                foundElement.parentElement.removeChild(foundElement);
-                            } else {
-                                console.error("Dragged element could not be found in the DOM.");
-                            }
-                        }
-                    }
-                
-                    // Reset drag variables
-                    draggedElement = null;
-                    originalParent = null;
-                });
-            });
+            
 
             document.querySelectorAll(".category-items, .vault-category-items").forEach((zone) => {
                 zone.addEventListener("dragover", (event) => {
@@ -1417,14 +1312,20 @@
                     event.dataTransfer.dropEffect = "move";
                 });
 
-                zone.addEventListener("drop", (event) => {
+                zone.addEventListener("drop", async (event) => {
                     event.preventDefault();
-                    if (!draggedElement) return;
-                    
+                    if (!draggedElement || !originalParent) return;
+
                     let targetZone = zone;
                     let targetCategory = targetZone.closest(".category")?.id;
-                    let targetCharacter = targetZone.closest(".column")?.id || "vault";
-                    let originalCharacter = originalParent.closest(".column")?.id || "vault";
+                    
+                    // Safely determine target character
+                    let targetCharacterElement = targetZone.closest(".column");
+                    let targetCharacter = targetCharacterElement ? targetCharacterElement.id : "vault";
+                    
+                    // Safely determine original character
+                    let originalCharacterElement = originalParent.closest(".column");
+                    let originalCharacter = originalCharacterElement ? originalCharacterElement.id : "vault";
 
                     // Prevent dropping into the same location or same character+category
                     if (originalParent === targetZone || 
@@ -1446,11 +1347,23 @@
 
                     // Determine the section type based on the parent container
                     const sectionType = targetCharacter;
-                    
+
                     // Get item data for API transfer
                     let itemInfoStr = draggedElement.getAttribute('data-item-info');
-                    let itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                    if (!itemInfoStr) {
+                        showNotification('Missing item data', 'error');
+                        return;
+                    }
                     
+                    let itemData;
+                    try {
+                        itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                    } catch (error) {
+                        console.error("Error parsing item data:", error);
+                        showNotification('Error processing item data', 'error');
+                        return;
+                    }
+
                     // Create a new container for the dragged element
                     const newDiv = document.createElement("div");
                     newDiv.classList.add(`${sectionType}-inventory-item`);
@@ -1458,24 +1371,160 @@
 
                     // Clone the dragged element before appending
                     const clonedElement = draggedElement.cloneNode(true);
-                    // If it was equipped, change it back to a regular item
-                    clonedElement.classList.remove("item-container-equipped");
-                    clonedElement.classList.add("item-container");
-                    newDiv.appendChild(clonedElement);
-
-                    // Append the new container to the target zone
-                    targetZone.appendChild(newDiv);
-
-                    // Remove the old container from the original parent
-                    if (originalParent && originalParent.parentElement) {
-                        originalParent.parentElement.removeChild(originalParent);
+                    
+                    // If moving from equipped to non-equipped, change the class
+                    if (draggedElement.classList.contains("item-container-equipped")) {
+                        clonedElement.classList.remove("item-container-equipped");
+                        clonedElement.classList.add("item-container");
                     }
                     
-                    // Show transferring notification
-                    showNotification('Transferring item...', 'info');
+                    newDiv.appendChild(clonedElement);
+
+                    // Store a direct reference to the parent node
+                    const originalItemContainer = draggedElement.parentNode;
+
+                    // Perform the API transfer
+                    const transferSuccess = await performApiTransfer(itemData, targetZone, draggedElement, originalParent);
                     
-                    // Perform the API transfer in the background
-                    performApiTransfer(itemData, targetZone, draggedElement, originalParent);
+                    if (transferSuccess) {
+                        // Remove the original item container using the parent node
+                        if (originalItemContainer && originalItemContainer.parentNode) {
+                            originalItemContainer.parentNode.removeChild(originalItemContainer);
+                        }
+                        
+                        // Add the new container to the target zone
+                        targetZone.appendChild(newDiv);
+                        
+                        // Re-apply event listeners to the new element
+                        clonedElement.addEventListener('click', function() {
+                            showItemDetails(this);
+                        });
+                    } else {
+                        showNotification('Failed to transfer item', 'error');
+                    }
+                });
+            });
+
+            document.querySelectorAll(".equipped-items").forEach((zone) => {
+                zone.addEventListener("dragover", (event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                });
+
+                zone.addEventListener("drop", async (event) => {
+                    event.preventDefault();
+                    if (!draggedElement || !originalParent) return;
+
+                    // If the dragged item is already equipped, don't re-equip it
+                    if (draggedElement.classList.contains("item-container-equipped")) {
+                        return;
+                    }
+
+                    // Get item data for API equip
+                    let itemInfoStr = draggedElement.getAttribute('data-item-info');
+                    if (!itemInfoStr) {
+                        showNotification('Missing item data', 'error');
+                        return;
+                    }
+                    
+                    let itemData;
+                    try {
+                        itemData = JSON.parse(decodeURIComponent(itemInfoStr));
+                    } catch (error) {
+                        console.error("Error parsing item data:", error);
+                        showNotification('Error processing item data', 'error');
+                        return;
+                    }
+
+                    // Store a direct reference to the parent node
+                    const originalItemContainer = draggedElement.parentNode;
+
+                    // Handle currently equipped item (if any)
+                    const currentlyEquipped = zone.querySelector(".item-container-equipped");
+                    let previousEquippedData = null;
+                    
+                    if (currentlyEquipped) {
+                        try {
+                            const equippedInfoStr = currentlyEquipped.getAttribute('data-item-info');
+                            if (equippedInfoStr) {
+                                previousEquippedData = JSON.parse(decodeURIComponent(equippedInfoStr));
+                            }
+                        } catch (error) {
+                            console.error("Error parsing equipped item data:", error);
+                        }
+                    }
+                    
+                    // Remove highlight from all drop zones
+                    document.querySelectorAll(".box, .vault-box, .equipped-box").forEach((box) => {
+                        box.classList.remove("highlight-drop-zone");
+                        box.style.display = "none";
+                    });
+
+                    // Store a clone of the dragged element before any modifications
+                    // to prevent null reference errors if the original is removed
+                    const draggedClone = draggedElement.cloneNode(true);
+
+                    // Perform the API equip
+                    const equipSuccess = await performApiEquip(itemData, zone, draggedElement, originalParent);
+                    
+                    if (equipSuccess) {
+                        // Remove the original item from where it was
+                        if (originalItemContainer && originalItemContainer.parentNode) {
+                            originalItemContainer.parentNode.removeChild(originalItemContainer);
+                        }
+                        
+                        // Create a container for the new equipped item
+                        const characterType = zone.closest(".column").id; // hunter, warlock, or titan
+                        const newEquippedDiv = document.createElement("div");
+                        newEquippedDiv.classList.add(`${characterType}-equipped-item`);
+                        
+                        // Use the clone we created earlier
+                        const clonedElement = draggedClone;
+                        clonedElement.classList.remove("item-container");
+                        clonedElement.classList.add("item-container-equipped");
+                        
+                        newEquippedDiv.appendChild(clonedElement);
+                        
+                        // First store the currently equipped item if it exists
+                        if (currentlyEquipped && previousEquippedData) {
+                            // Get the category to which this item belongs
+                            const itemCategory = zone.closest(".category")?.id;
+                            if (itemCategory) {
+                                // Find the matching category-items div
+                                const categoryItems = zone.closest(".category").querySelector(".category-items");
+                                if (categoryItems && categoryItems.children.length < 9) { // Check if there's space
+                                    // Create a new div for the previously equipped item
+                                    const prevEquippedContainer = document.createElement("div");
+                                    prevEquippedContainer.classList.add(`${characterType}-inventory-item`);
+                                    
+                                    // Clone the currently equipped item and change its class
+                                    const prevEquippedElement = currentlyEquipped.cloneNode(true);
+                                    prevEquippedElement.classList.remove("item-container-equipped");
+                                    prevEquippedElement.classList.add("item-container");
+                                    
+                                    prevEquippedContainer.appendChild(prevEquippedElement);
+                                    categoryItems.appendChild(prevEquippedContainer);
+                                    
+                                    // Add click event listener
+                                    prevEquippedElement.addEventListener('click', function() {
+                                        showItemDetails(this);
+                                    });
+                                }
+                            }
+                        }
+                        
+                        // Clear the equipped zone and add the new equipped item
+                        zone.innerHTML = '';
+                        zone.appendChild(newEquippedDiv);
+                        
+                        // Re-apply event listeners to the new element
+                        clonedElement.addEventListener('click', function() {
+                            showItemDetails(this);
+                        });
+                        
+                    } else {
+                        showNotification('Failed to equip item', 'error');
+                    }
                 });
             });
 
@@ -1569,28 +1618,50 @@
             // Function to handle API transfers
             async function performApiTransfer(itemData, targetZone, draggedElement, originalParent) {
                 try {
-                    // Determine if transferring to vault
+                    // Determine if the target zone is the vault
                     const targetIsVault = targetZone.closest(".vault-category-items") !== null;
+                    // Determine if the source zone is the vault
                     const sourceIsVault = originalParent.closest(".vault-category-items") !== null;
-                    
-                    // If target is not vault, determine destination character ID
+            
+                    console.log("Transfer Debug:", {
+                        sourceIsVault,
+                        targetIsVault,
+                        originalParent,
+                        targetZone
+                    });
+            
                     let destinationCharacterId = null;
                     if (!targetIsVault) {
                         const destinationClass = targetZone.closest(".column")?.id; // hunter, warlock, or titan
                         if (destinationClass) {
+                            // Fetch character data to get the characterId
                             const response = await fetch('/api/characters');
                             const characterData = await response.json();
-                            
+            
                             if (characterData && characterData.characterData) {
                                 destinationCharacterId = characterData.characterData[destinationClass]?.characterId;
                             }
                         }
                     }
-                    
+            
+                    if (!destinationCharacterId && !targetIsVault) {
+                        console.error("Failed to determine destination character ID.");
+                        showNotification('Failed to determine destination character.', 'error');
+                        return false;
+                    }
+            
                     let transferResult = false;
-                    
+            
                     if (sourceIsVault && !targetIsVault) {
                         // From vault to character
+                        console.log("Transferring from vault to character:", {
+                            itemReferenceHash: itemData.itemReferenceHash,
+                            stackSize: 1,
+                            transferToVault: false,
+                            itemInstanceId: itemData.itemInstanceId,
+                            characterId: destinationCharacterId
+                        });
+            
                         transferResult = await transferItem(
                             itemData.itemReferenceHash,
                             1, // stack size
@@ -1600,6 +1671,14 @@
                         );
                     } else if (!sourceIsVault && targetIsVault) {
                         // From character to vault
+                        console.log("Transferring from character to vault:", {
+                            itemReferenceHash: itemData.itemReferenceHash,
+                            stackSize: 1,
+                            transferToVault: true,
+                            itemInstanceId: itemData.itemInstanceId,
+                            characterId: itemData.characterId
+                        });
+            
                         transferResult = await transferItem(
                             itemData.itemReferenceHash,
                             1, // stack size
@@ -1609,6 +1688,15 @@
                         );
                     } else if (!sourceIsVault && !targetIsVault) {
                         // From character to character (via vault)
+                        console.log("Transferring from character to character via vault:", {
+                            itemReferenceHash: itemData.itemReferenceHash,
+                            stackSize: 1,
+                            transferToVault: true,
+                            itemInstanceId: itemData.itemInstanceId,
+                            characterId: itemData.characterId
+                        });
+            
+                        // First transfer to vault
                         transferResult = await transferItem(
                             itemData.itemReferenceHash,
                             1,
@@ -1616,8 +1704,9 @@
                             itemData.itemInstanceId,
                             itemData.characterId
                         );
-                        
+            
                         if (transferResult) {
+                            // Then transfer from vault to destination character
                             transferResult = await transferItem(
                                 itemData.itemReferenceHash,
                                 1,
@@ -1627,13 +1716,20 @@
                             );
                         }
                     }
-                    
+            
                     if (transferResult) {
                         showNotification('Transfer successful', 'success');
                         console.log('Item transfer successful');
+                        return true;
+                    } else {
+                        showNotification('Transfer failed', 'error');
+                        console.error('Item transfer failed');
+                        return false;
                     }
                 } catch (error) {
-                    showNotification('Error during transfer', 'error');
+                    console.error("Error during transfer:", error);
+                    showNotification('Error during transfer: ' + error.message, 'error');
+                    return false;
                 }
             }
         });

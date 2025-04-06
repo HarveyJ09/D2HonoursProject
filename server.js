@@ -1826,19 +1826,22 @@ app.post('/api/transferitem', async (req, res) => {
         const { membershipType } = req.session;
         const { itemReferenceHash, stackSize, transferToVault, itemId, characterId } = req.body;
 
-        if (!membershipType || !itemReferenceHash || !stackSize || !itemId || !characterId) {
+        if (!membershipType || !itemReferenceHash || !characterId) {
             return res.status(400).json({ error: "Missing required parameters" });
         }
 
+        // Ensure we have proper values
+        const stackSizeToUse = stackSize || 1;
+        
         const transferUrl = `https://www.bungie.net/Platform/Destiny2/Actions/Items/TransferItem/`;
 
         const payload = {
-            itemReferenceHash,
-            stackSize,
-            transferToVault,
-            itemId,
-            characterId,
-            membershipType
+            itemReferenceHash: parseInt(itemReferenceHash),
+            stackSize: stackSizeToUse,
+            transferToVault: Boolean(transferToVault),
+            itemId: itemId,
+            characterId: characterId,
+            membershipType: parseInt(membershipType)
         };
 
         const response = await axios.post(transferUrl, payload, {
