@@ -362,6 +362,7 @@ app.get('/api/hunterinventory', async (req, res) => {
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     impact: definition ? definition.statImpact : "N/A",
                     range: definition ? definition.statRange : "N/A",
                     stability: definition ? definition.statStability : "N/A",
@@ -590,6 +591,7 @@ app.get('/api/warlockinventory', async (req, res) => {
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     impact: definition ? definition.statImpact : "N/A",
                     range: definition ? definition.statRange : "N/A",
                     stability: definition ? definition.statStability : "N/A",
@@ -817,6 +819,7 @@ app.get('/api/titaninventory', async (req, res) => {
                     bucketHash: lightLevelData ? lightLevelData.bucketHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     impact: definition ? definition.statImpact : "N/A",
                     range: definition ? definition.statRange : "N/A",
                     stability: definition ? definition.statStability : "N/A",
@@ -1031,6 +1034,7 @@ app.get('/api/vault', async (req, res) => {
                     bucketHash: definition ? definition.bucketTypeHash : null,
                     icon: definition ? definition.icon : null,
                     lightLevel: lightLevelData ? lightLevelData.lightLevel : null,
+                    itemTypeDisplayName: definition ? definition.itemTypeDisplayName : null,
                     impact: definition ? definition.statImpact : "N/A",
                     range: definition ? definition.statRange : "N/A",
                     stability: definition ? definition.statStability : "N/A",
@@ -2017,6 +2021,35 @@ app.get('/api/inventorymaterials', async (req, res) => {
         res.status(500).json({ error: "Failed to retrieve materials" });
     }
 });
+
+app.post('/api/logout', (req, res) => {
+    // Save access token for logging before destroying session
+    const accessToken = req.session.accessToken;
+    
+    // Clear session data
+    req.session.destroy(err => {
+        if (err) {
+            console.error("Error destroying session:", err);
+            return res.status(500).json({ error: "Failed to log out" });
+        }
+        
+        // Clear cookies
+        res.clearCookie('connect.sid'); // Clear the session cookie
+        
+        // Log that the access token has been cleared
+        if (accessToken) {
+            console.log("Access token has been cleared");
+            // Note: Bungie's API doesn't have a direct revoke endpoint,
+            // so we're just clearing it on our side
+        }
+        
+        res.json({ 
+            message: "Logged out successfully", 
+            details: "All session data including access token and cookies have been cleared" 
+        });
+    });
+});
+
 // Load SSL certificates
 const options = {
     key: fs.readFileSync('certs/server.key'),

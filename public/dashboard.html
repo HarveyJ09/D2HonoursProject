@@ -410,7 +410,7 @@
             aria-keyshortcuts="R">
             <img src="assets/reload.png" alt="Refresh Icon" style="width: 20px; height: 20px; filter: invert(1); transform: translateX(-2px)" title="Refresh">
             </button>
-            <button onclick="clearSessionData();" 
+            <button onclick="logout();" 
             style="width: 30px; height: 30px; background: none; border: 2px solid white; border-radius: 5px; cursor: pointer; margin-right: 10px;" 
             title="Clear Session Data">
             <img src="assets/logout.png" alt="Logout Icon" style="width: 20px; height: 20px; filter: invert(1);">
@@ -1600,6 +1600,8 @@
                             
                             if (equipResult) {
                                 showNotification('Item equipped successfully', 'success');
+                                // Refresh character data to update power level and stats
+                                await fetchCharacterData();
                                 return true;
                             } else {
                                 showNotification('Failed to equip item', 'error');
@@ -1791,6 +1793,34 @@
             });
         }
         
+        async function logout() {
+            try {
+                // Clear Bungie.net data
+                console.log("Logging out and clearing Bungie.net data");
+                await fetch('/auth/logout', { 
+                    method: 'POST', 
+                    credentials: 'include' 
+                });
+                
+                // Clear all local data
+                console.log("Clearing local data");
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Clear all cookies
+                document.cookie.split(";").forEach(cookie => {
+                    const name = cookie.split("=")[0].trim();
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/`;
+                });
+                
+                // Redirect to login page
+                window.location.href = "index.html";
+            } catch (error) {
+                console.error("Error during logout:", error);
+                showNotification('Logout failed', 'error');
+            }
+        }
+
         async function fetchData() {
             try {
                 // First fetch character data
