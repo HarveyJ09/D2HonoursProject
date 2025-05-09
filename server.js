@@ -6,6 +6,7 @@ const axios = require('axios');
 const path = require('path');
 const session = require('express-session');
 const { AuthorizationCode } = require('simple-oauth2');
+const { Agent } = require('http');
 
 const app = express();
 const PORT = 3000;
@@ -26,6 +27,7 @@ app.use(session({
 const API_KEY = process.env.API_KEY;
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
+const USER_AGENT = process.env.User_Agent;
 
 // Bungie API URLs
 const BASE_AUTH_URL = "https://www.bungie.net/en/OAuth/Authorize";
@@ -34,11 +36,11 @@ const TOKEN_URL = "https://www.bungie.net/platform/app/oauth/token/";
 const GET_USER_PROFILE_URL = "https://www.bungie.net/Platform/Destiny2/{membershipType}/Profile/{membershipId}/?components=200";
 const GET_USER_DETAILS_ENDPOINT = "https://www.bungie.net/Platform/User/GetCurrentBungieNetUser/";
 
-
 // OAuth2 Configuration
 const oauth2 = new AuthorizationCode({
     client: { id: CLIENT_ID, secret: CLIENT_SECRET },
     auth: { tokenHost: 'https://www.bungie.net', authorizePath: '/en/OAuth/Authorize', tokenPath: '/platform/app/oauth/token/' },
+    http: {headers: {'User-Agent': USER_AGENT}},
     options: { authorizationMethod: 'body' }
 });
 
@@ -48,7 +50,7 @@ const authUrl = oauth2.authorizeURL({ redirect_uri: REDIRECT_URL });
 app.get('/', (req, res) => {
     res.send(`<html><body><h1>Welcome</h1><p><a href="${authUrl}">Click here to authenticate with Bungie</a></p></body></html>`);
 });
-
+console.log("USER_AGENT:", USER_AGENT);
 // Authentication Callback
 app.get('/auth/callback', async (req, res) => {
     const { code } = req.query;
@@ -56,21 +58,23 @@ app.get('/auth/callback', async (req, res) => {
         return res.status(400).send("Missing authorization code");
     }
 
+    
     try {
         const tokenParams = { code, redirect_uri: REDIRECT_URL, scope: "" };
         const accessToken = await oauth2.getToken(tokenParams);
 
         // Store token in session
         req.session.accessToken = accessToken.token.access_token;
-
+        console.log("Access Token Set:", req.session.accessToken);
         // Fetch user details
         const response = await axios.get(GET_USER_DETAILS_ENDPOINT, {
             headers: { 
-                'X-API-KEY': API_KEY, 
-                Authorization: `Bearer ${accessToken.token.access_token}`
+            'X-API-KEY': API_KEY, 
+            'Authorization': `Bearer ${accessToken.token.access_token}`,
+            'User-Agent': USER_AGENT
             }
         });
-
+        
         const userName = response.data.Response.uniqueName;
         req.session.destinyMembershipId = response.data.Response.membershipId; // Store membership ID
 
@@ -78,6 +82,7 @@ app.get('/auth/callback', async (req, res) => {
         res.redirect(`/dashboard.html?user=${encodeURIComponent(userName)}`);
     } catch (error) {
         console.error("Error exchanging code for token:", error.response ? error.response.data : error.message);
+        
         res.status(500).send("Authentication failed");
     }
 });
@@ -127,7 +132,6 @@ app.get('/api/characters', async (req, res) => {
 
         const characterIds = profileResponse.data.Response.profile.data.characterIds;
 
-        // ✅ Store in session
         req.session.membershipId = membershipId;
         req.session.membershipType = membershipType;
         req.session.characterIds = characterIds;
@@ -138,7 +142,7 @@ app.get('/api/characters', async (req, res) => {
             characterIds
         });
 
-        // Fetch character data for Hunter, Warlock, and Titan
+        
         let characterData = {
             hunter: null,
             warlock: null,
@@ -149,7 +153,7 @@ app.get('/api/characters', async (req, res) => {
 
         for (let i = 0; i < characterIds.length; i++) {
             const characterId = characterIds[i];
-            const characterRole = characterRoles[i]; // Maps characterIds[0] -> hunter, [1] -> warlock, [2] -> titan
+            const characterRole = characterRoles[i]; 
 
             const characterUrl = `https://www.bungie.net/Platform/Destiny2/${membershipType}/Profile/${membershipId}/Character/${characterId}/?components=200`;
 
