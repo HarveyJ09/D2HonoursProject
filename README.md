@@ -10,7 +10,8 @@ Search bar - Click to activate and type
 
 REMINDER - You can only equip 1 exotic item at a time per weapons and armor. You will error trying to equip an item to a character with a full inventory.
 
-UPDATE - STILL WORKING 1 YEAR LATER
+Demonstration (2026):
+https://www.youtube.com/watch?v=LZ7r8rIRVck
 
 
 # To Do:
