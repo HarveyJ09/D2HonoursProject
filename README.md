@@ -1,5 +1,5 @@
 # D2HonorsProject
-Harvey Jarvis's Honours Project Repository
+Harvey Jarvis's University Honours Project Repository
 
 Functionality:
 Transferring and Equipping items - Uses a drag and drop system, drag the item you want to the section you want the item to go.
